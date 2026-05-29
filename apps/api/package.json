@@ -12,6 +12,7 @@
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@swc/core": "^1.15.8",
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.15.3",
@@ -21,10 +22,11 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@repo/trpc": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@repo/trpc": "workspace:*",
     "@scalar/express-api-reference": "^0.8.30",
     "@trpc/server": "^11.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "trpc-to-openapi": "^3.1.0",
