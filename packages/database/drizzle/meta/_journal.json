@@ -15,6 +15,20 @@
       "when": 1779191367915,
       "tag": "0001_lonely_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780486068059,
+      "tag": "0002_fancy_loki",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780486172140,
+      "tag": "0003_common_sunset_bain",
+      "breakpoints": true
     }
   ]
 }
