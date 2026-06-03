@@ -1,14 +1,15 @@
 "use client";
-import { SubmitHandler, useForm } from "react-hook-form";
+
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { trpc } from "~/trpc/client";
-import { useSignup } from "~/hooks/api/auth";
+import { useSignUp } from "~/hooks/api/auth";
+import { SubmitHandler, useForm } from "react-hook-form";
 
-type SignupFormValues = {
+type SignUpFormValues = {
   fullName: string;
   email: string;
   password: string;
@@ -24,20 +25,18 @@ export function SignupForm({ className, ...props }: React.ComponentProps<"div">)
     isIdle,
     failureCount,
     isSuccess,
-  } = useSignup();
+  } = useSignUp();
 
-
-
-  const { register, handleSubmit } = useForm<SignupFormValues>({
+  const { register, handleSubmit } = useForm<SignUpFormValues>({
     defaultValues: {
       fullName: "",
       email: "",
       password: "",
       confirmPassword: "",
-    },
+    }
   });
 
-  const onSubmit: SubmitHandler<SignupFormValues> = async (data) => {
+  const onSubmit: SubmitHandler<SignUpFormValues> = async (data) => {
     console.log("Form Data:", data);
     const { id } = await createUserWithEmailAndPasswordAsync({
       email: data.email,

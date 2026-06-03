@@ -1,6 +1,9 @@
+import { is } from "zod/v4/locales/index.js";
 import { trpc } from "~/trpc/client";
 
-export const useSignup = () => {
+//, sign up hook 
+export const useSignUp = () => {
+  const utils = trpc.useUtils()
   const {
     mutateAsync: createUserWithEmailAndPasswordAsync,
     mutate: createUserWithEmailAndPassword,
@@ -10,7 +13,11 @@ export const useSignup = () => {
     failureCount,
     isSuccess,
     status
-  } = trpc.auth.createUserWithEmailAndPassword.useMutation();
+  } = trpc.auth.createUserWithEmailAndPassword.useMutation({
+    onSuccess: async () => {
+      await utils.auth.getLoggedInUserInfo.invalidate()
+    }
+  });
 
   return {
     createUserWithEmailAndPasswordAsync,
@@ -20,11 +27,13 @@ export const useSignup = () => {
     isIdle,
     failureCount,
     isSuccess,
+    status
   };
 };
 
 
-export const useSignin = () => {
+//, sign in hook 
+export const useSignIn = () => {
   const {
     mutateAsync: signinUserWithEmailAndPasswordAsync,
     mutate: signinUserWithEmailAndPassword,
@@ -45,3 +54,11 @@ export const useSignin = () => {
     isSuccess,
   };
 };
+
+//, get user info hook 
+
+export const useUser = () => {
+  const {data: user, isFetched,  } = trpc.auth.getLoggedInUserInfo.useQuery()
+
+  return {user, isFetched}
+}

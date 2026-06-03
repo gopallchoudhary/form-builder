@@ -1,14 +1,24 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useUser } from "~/hooks/api/auth";
 import { trpc } from "~/trpc/client";
 import { api } from "~/trpc/server";
 
 export default function Home() {
-  const { data } = trpc.chaicode.useQuery({ email: "go12@gmail.com", name: "Gopal", age: 25 });
+  const router = useRouter();
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user && user.id) {
+      router.replace("/dashboard");
+    } else {
+      router.replace("/login");
+    }
+  }, [user]);
   return (
     <main className="min-h-screen min-w-screen flex justify-center items-center">
-      <div>
-        <h1 className="text-5xl">Server Message: {data?.message}</h1>
-      </div>
+      <div>{JSON.stringify(user)}</div>
     </main>
   );
 }

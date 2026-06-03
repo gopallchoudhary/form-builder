@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+// @ts-ignore: Ignore CSS module declaration missing for global stylesheet
 import "./globals.css";
 import { GlobalProviders } from "~/providers/global";
 

@@ -9,12 +9,12 @@ export const createUserWithEmailAndPasswordInput = z.object({
 
 export type CreateUserWithEmailAndPasswordInputType = z.infer<typeof createUserWithEmailAndPasswordInput>
 
-export const signinUserWithEmailAndPasswordInput = z.object({
+export const signInUserWithEmailAndPasswordInput = z.object({
     email: z.email().describe('email of the user'),
     password: z.string().describe('passwrod of the  user')
 })
 
-export type SigninUserWithEmailAndPasswordInputType = z.infer<typeof signinUserWithEmailAndPasswordInput>
+export type SignInUserWithEmailAndPasswordInputType = z.infer<typeof signInUserWithEmailAndPasswordInput>
 
 
 

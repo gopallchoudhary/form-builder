@@ -4,15 +4,15 @@ import { z, zodUndefinedModel } from "../../schema";
 import { userService } from "../../services";
 import { publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import { createUserWithEmailAndPasswordInputModel, createUserWithEmailAndPasswordOutputModel, signinUserWithEmailAndPasswordInputModel, signinUserWithEmailAndPasswordOutputModel } from "./model";
-import { setAuthenticationCookie } from "../../utils/cookie";
+import { createUserWithEmailAndPasswordInputModel, createUserWithEmailAndPasswordOutputModel, getLoggedInUserInfoInputModel, getLoggedInUserInfoOutputModel, signInUserWithEmailAndPasswordInputModel, signInUserWithEmailAndPasswordOutputModel } from "./model";
+import { getAuthenticationCookie, setAuthenticationCookie } from "../../utils/cookie";
 import { createNextApiHandler } from "@trpc/server/adapters/next";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
 
 export const authRouter = router({
-  // create User
+  //. create User
   createUserWithEmailAndPassword: publicProcedure
     .meta({openapi: {
       method: 'POST',
@@ -28,31 +28,54 @@ export const authRouter = router({
       })
 
       setAuthenticationCookie(ctx, token)
+      
     
       return {
         id
       }
     }),
 
-  // signin User
+  //. signin User
     signinUserWithEmailAndPassword: publicProcedure
         .meta({openapi: {
             method: 'POST',
             path: getPath('/signinUserWithEmailAndPassword'),
             tags: TAGS
         }})
-        .input(signinUserWithEmailAndPasswordInputModel)
-        .output(signinUserWithEmailAndPasswordOutputModel)
+        .input(signInUserWithEmailAndPasswordInputModel)
+        .output(signInUserWithEmailAndPasswordOutputModel)
         .mutation( async ({input, ctx}) => {
             const {email, password} = input
-            const {id} = await userService.signinUserWithEmailAndPassword({
+            const {id, token} = await userService.signInUserWithEmailAndPassword({
                 email, password
             })
             
+            setAuthenticationCookie(ctx, token)
             
             return {
-                id,
-                
+                id
+            }
+        }),
+
+  //. get logged in user info 
+    getLoggedInUserInfo: publicProcedure
+        .meta({openapi: {
+            method: 'GET',
+            path: getPath('/getLoggedInUserInfo'),
+            tags: TAGS
+        }})
+        .input(getLoggedInUserInfoInputModel)
+        .output(getLoggedInUserInfoOutputModel)
+        .query(async({ctx}) => {
+            const token = getAuthenticationCookie(ctx)
+            
+            const {id, email, fullName, profileImageUrl} =  await userService.verifyAndDecodeUserToken(token)
+
+            return {
+              id,
+              email,
+              fullName, 
+              profileImageUrl
             }
         })
 });
