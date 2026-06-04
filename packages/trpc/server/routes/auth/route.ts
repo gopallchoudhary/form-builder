@@ -62,7 +62,8 @@ export const authRouter = router({
         .meta({openapi: {
             method: 'GET',
             path: getPath('/getLoggedInUserInfo'),
-            tags: TAGS
+            tags: TAGS,
+            protect: true
         }})
         .input(getLoggedInUserInfoInputModel)
         .output(getLoggedInUserInfoOutputModel)
