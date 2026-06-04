@@ -2,7 +2,7 @@
 import { string } from "zod";
 import { z, zodUndefinedModel } from "../../schema";
 import { userService } from "../../services";
-import { publicProcedure, router } from "../../trpc";
+import { authenticatedProcedure, publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
 import { createUserWithEmailAndPasswordInputModel, createUserWithEmailAndPasswordOutputModel, getLoggedInUserInfoInputModel, getLoggedInUserInfoOutputModel, signInUserWithEmailAndPasswordInputModel, signInUserWithEmailAndPasswordOutputModel } from "./model";
 import { getAuthenticationCookie, setAuthenticationCookie } from "../../utils/cookie";
@@ -58,7 +58,7 @@ export const authRouter = router({
         }),
 
   //. get logged in user info 
-    getLoggedInUserInfo: publicProcedure
+    getLoggedInUserInfo: authenticatedProcedure
         .meta({openapi: {
             method: 'GET',
             path: getPath('/getLoggedInUserInfo'),
@@ -67,14 +67,14 @@ export const authRouter = router({
         .input(getLoggedInUserInfoInputModel)
         .output(getLoggedInUserInfoOutputModel)
         .query(async({ctx}) => {
-            const token = getAuthenticationCookie(ctx)
             
-            const {id, email, fullName, profileImageUrl} =  await userService.verifyAndDecodeUserToken(token)
+            
+            const {id, email, fullName, profileImageUrl} =  await userService.getUserInfoById(ctx.user.id)
 
             return {
               id,
               email,
-              fullName, 
+              fullName,
               profileImageUrl
             }
         })
