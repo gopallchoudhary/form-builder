@@ -6,3 +6,14 @@ export const createFormInput = z.object({
 })
 
 export type CreateFormInputType = z.infer<typeof createFormInput>
+
+// list forms by user id
+
+export const listFormsByUserIdInput = z.object({
+    userId: z.string().min(1).max(55).describe('User ID'),
+})
+
+export type ListFormsByUserIdInputType = z.infer<typeof listFormsByUserIdInput>
+
+
+
