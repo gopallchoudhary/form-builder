@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1779181962088,
-      "tag": "0000_silent_sebastian_shaw",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1779191367915,
-      "tag": "0001_lonely_multiple_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1780486068059,
-      "tag": "0002_fancy_loki",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1780486172140,
-      "tag": "0003_common_sunset_bain",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1780488042265,
-      "tag": "0004_exotic_mongoose",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1780535666566,
-      "tag": "0005_wise_ultragirl",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1780566404454,
-      "tag": "0006_silent_lady_vermin",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1780566506787,
-      "tag": "0007_stormy_tony_stark",
+      "when": 1780780463956,
+      "tag": "0000_careful_grey_gargoyle",
       "breakpoints": true
     }
   ]
