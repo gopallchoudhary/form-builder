@@ -43,3 +43,10 @@ export const getFieldInput = z.object({
 })
 
 export type GetFieldInputType = z.infer<typeof getFieldInput>
+
+// ── listFields ─────────────────────────────────────────────────────────────────
+export const listFieldsInput = z.object({
+    formId: z.string().min(1).describe('ID of the form to fetch fields for'),
+})
+
+export type ListFieldsInputType = z.infer<typeof listFieldsInput>

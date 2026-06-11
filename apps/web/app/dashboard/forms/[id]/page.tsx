@@ -36,6 +36,7 @@ import {
   useUpdateField,
   useDeleteField,
   useGetField,
+  useListFields,
 } from "~/hooks/api/form";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -182,7 +183,7 @@ function AddFieldPanel({
   fields: FieldSnapshot[];
   onFieldCreated: (field: FieldSnapshot) => void;
 }) {
-  const { createFieldAsync, status } = useCreateField(formId);
+  const { createFieldAsync, status } = useCreateField();
   const isPending = status === "pending";
 
   const {
@@ -582,10 +583,18 @@ const FormBuilderPage = () => {
   const { id: formId } = useParams<{ id: string }>();
   const router = useRouter();
 
-  // Local field list — seeded from createField responses (no listFields query yet)
+  // Local field list
   const [fields, setFields] = useState<FieldSnapshot[]>([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
+
+  const { fields: fetchedFields, isLoading: isFetchingFields } = useListFields(formId);
+
+  useEffect(() => {
+    if (fetchedFields) {
+      setFields(fetchedFields as FieldSnapshot[]);
+    }
+  }, [fetchedFields]);
 
   const { deleteFieldAsync } = useDeleteField();
 

@@ -14,6 +14,8 @@ import {
     deleteFieldOutputModel,
     getFieldInputModel,
     getFieldOutputModel,
+    listFieldsInputModel,
+    listFieldsOutputModel,
 } from "./model";
 
 const TAGS = ["Form"];
@@ -115,5 +117,20 @@ export const formRouter = router({
         .query(async ({ input }) => {
             const field = await formFieldService.getField(input)
             return field
+        }),
+
+    //. list fields
+    listFields: authenticatedProcedure
+        .meta({ openapi: {
+            method: 'GET',
+            path: getPath('/listFields'),
+            tags: TAGS,
+            protect: true,
+        }})
+        .input(listFieldsInputModel)
+        .output(listFieldsOutputModel)
+        .query(async ({ input }) => {
+            const fields = await formFieldService.listFields(input)
+            return fields
         }),
 })

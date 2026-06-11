@@ -93,3 +93,11 @@ export const getFieldInputModel = z.object({
 })
 
 export const getFieldOutputModel = fieldOutputModel
+
+// ── listFields ─────────────────────────────────────────────────────────────────
+
+export const listFieldsInputModel = z.object({
+    formId: z.string().min(1).describe('ID of the form to fetch fields for'),
+})
+
+export const listFieldsOutputModel = z.array(fieldOutputModel)

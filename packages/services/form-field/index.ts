@@ -163,6 +163,31 @@ class FormFieldService {
 
         return field[0]!
     }
+    //. list fields
+    public async listFields(payload: import('./model').ListFieldsInputType) {
+        const { listFieldsInput } = await import('./model')
+        const { formId } = await listFieldsInput.parseAsync(payload)
+
+        const fields = await db
+            .select({
+                id: formFieldsTable.id,
+                label: formFieldsTable.label,
+                labelKey: formFieldsTable.labelKey,
+                placeholder: formFieldsTable.placeholder,
+                description: formFieldsTable.description,
+                isRequired: formFieldsTable.isRequired,
+                type: formFieldsTable.type,
+                index: formFieldsTable.index,
+                formId: formFieldsTable.formId,
+                createdAt: formFieldsTable.createdAt,
+                updatedAt: formFieldsTable.updatedAt,
+            })
+            .from(formFieldsTable)
+            .where(eq(formFieldsTable.formId, formId))
+            .orderBy(formFieldsTable.index)
+
+        return fields
+    }
 }
 
 export default FormFieldService

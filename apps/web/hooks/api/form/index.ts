@@ -54,7 +54,7 @@ export const useListForms = () => {
 }
 
 //, create field hook
-export const useCreateField = (formId: string) => {
+export const useCreateField = () => {
   const utils = trpc.useUtils()
   const {
     mutateAsync: createFieldAsync,
@@ -68,6 +68,7 @@ export const useCreateField = (formId: string) => {
   } = trpc.form.createField.useMutation({
     onSuccess: async () => {
       await utils.form.getField.invalidate()
+      await utils.form.listFields.invalidate()
     }
   })
 
@@ -98,6 +99,7 @@ export const useUpdateField = () => {
   } = trpc.form.updateField.useMutation({
     onSuccess: async (data) => {
       await utils.form.getField.invalidate({ fieldId: data.id })
+      await utils.form.listFields.invalidate()
     }
   })
 
@@ -128,6 +130,7 @@ export const useDeleteField = () => {
   } = trpc.form.deleteField.useMutation({
     onSuccess: async () => {
       await utils.form.getField.invalidate()
+      await utils.form.listFields.invalidate()
     }
   })
 
@@ -160,6 +163,32 @@ export const useGetField = (fieldId: string) => {
 
   return {
     field,
+    isLoading,
+    isFetching,
+    isFetched,
+    isError,
+    error,
+    refetch,
+  }
+}
+
+//, list fields hook
+export const useListFields = (formId: string) => {
+  const {
+    data: fields,
+    isLoading,
+    isFetching,
+    isFetched,
+    isError,
+    error,
+    refetch,
+  } = trpc.form.listFields.useQuery(
+    { formId },
+    { enabled: !!formId }
+  )
+
+  return {
+    fields,
     isLoading,
     isFetching,
     isFetched,
