@@ -5,6 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Graphify
+graphify-out/
+
 # Local env files
 .env
 .env.local
