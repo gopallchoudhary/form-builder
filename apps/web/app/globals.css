@@ -4,13 +4,19 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /*
+   * The radius scale is written out rather than derived from a single `--radius`, because
+   * DESIGN.md's two load-bearing numbers do not fit shadcn's fixed offsets: a single value
+   * cannot put `rounded-md` at 12 and `rounded-xl` at 24 at the same time. These are the
+   * tokens from `{rounded.*}`, and `--radius` stays only for components that read it.
+   */
+  --radius-sm: 0.5rem; /* 8  — inline pills, small badges */
+  --radius-md: 0.75rem; /* 12 — form inputs */
+  --radius-lg: 1rem; /* 16 — mid-size cards */
+  --radius-xl: 1.5rem; /* 24 — the canonical card and button radius */
+  --radius-2xl: 1.75rem; /* 28 */
+  --radius-3xl: 2rem; /* 32 */
+  --radius-4xl: 2.5rem; /* 40 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -42,6 +48,23 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /*
+   * `{typography.*}`. The display face is set at 900 — the brand's whole personality is a
+   * heavy display cut — and the eyebrow size is what `ex-data-table-cell` calls for.
+   */
+  --text-eyebrow: 0.625rem;
+  --text-eyebrow--line-height: 1rem;
+  --text-eyebrow--letter-spacing: 0.1em;
+  --text-display-lg: 2.25rem;
+  --text-display-lg--line-height: 2.5rem;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-md: 1.75rem;
+  --text-display-md--line-height: 2.25rem;
+  --text-display-md--letter-spacing: -0.02em;
+  --text-display-sm: 1.5rem;
+  --text-display-sm--line-height: 2rem;
+  --text-display-sm--letter-spacing: -0.01em;
 }
 
 /**
@@ -57,11 +80,11 @@
  * - `--ring` is ink rather than lime. Lime is the CTA colour, and a lime focus ring on a
  *   white or lime surface is close to invisible; focus has to win over brand.
  *
- * `--radius: 1.25rem` is chosen so `rounded-md` lands on 18px — a true pill on the 36px
- * default button — and `rounded-xl` lands on 24px, the canonical card radius.
+ * The radius scale is written out per token in `@theme` above, so `--radius` here is only
+ * a fallback for anything that still reads it.
  */
 :root {
-  --radius: 1.25rem;
+  --radius: 1.5rem;
   --background: #e8ebe6; /* canvas-soft — surface contrast is the elevation cue */
   --foreground: #0e0f0c; /* ink */
   --card: #ffffff; /* canvas — cards sit on the sage band */
@@ -80,11 +103,18 @@
   --border: #c8ccc4; /* hairline; ink at full strength is too heavy on every card */
   --input: #c8ccc4;
   --ring: #0e0f0c; /* ink, so focus reads on sage, white and lime alike */
-  --chart-1: #9fe870;
-  --chart-2: #2ead4b; /* positive */
-  --chart-3: #ffd11a; /* warning */
-  --chart-4: #38c8ff; /* accent cyan */
-  --chart-5: #ffc091; /* accent orange */
+  /*
+   * ink-deep, accent cyan, accent orange, positive, warning.
+   *
+   * DESIGN.md:537 bans the brand lime as a series colour — success is `positive`, never
+   * lime — and practically a lime line on a white card is barely visible. Lime stays the
+   * single CTA accent and appears nowhere in a chart.
+   */
+  --chart-1: #163300; /* ink-deep */
+  --chart-2: #38c8ff; /* accent cyan */
+  --chart-3: #ffc091; /* accent orange */
+  --chart-4: #2ead4b; /* positive */
+  --chart-5: #ffd11a; /* warning */
   --sidebar: #ffffff;
   --sidebar-foreground: #0e0f0c;
   --sidebar-primary: #0e0f0c; /* the sidebar's selected row is ink, keeping lime for one action */
@@ -115,11 +145,11 @@
   --border: #34372f;
   --input: #45483f;
   --ring: #9fe870;
-  --chart-1: #9fe870;
-  --chart-2: #2ead4b;
-  --chart-3: #ffd11a;
-  --chart-4: #38c8ff;
-  --chart-5: #ffc091;
+  --chart-1: #cdffad; /* ink-deep, lightened for the dark canvas */
+  --chart-2: #38c8ff;
+  --chart-3: #ffc091;
+  --chart-4: #2ead4b;
+  --chart-5: #ffd11a;
   --sidebar: #1a1c18;
   --sidebar-foreground: #e8ebe6;
   --sidebar-primary: #9fe870;

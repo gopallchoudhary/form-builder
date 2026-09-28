@@ -1,7 +1,7 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["SKIP_ENV_VALIDATION", "DATABASE_URL", "DATABASE_URL_TEST", "API_URL"],
+  "globalEnv": ["SKIP_ENV_VALIDATION", "DATABASE_URL", "DATABASE_URL_TEST", "API_URL", "CI"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -17,6 +17,9 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "db:create": {
+      "cache": false
     },
     "db:generate": {
       "inputs": ["$TURBO_DEFAULT$", ".env*"]

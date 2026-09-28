@@ -4,6 +4,7 @@
   "scripts": {
     "build": "dotenv -- turbo build",
     "dev": "dotenv -- turbo dev",
+    "db:create": "dotenv -- turbo db:create",
     "db:generate": "dotenv -- turbo db:generate",
     "db:migrate": "dotenv -- turbo db:migrate",
     "db:studio": "dotenv -- turbo db:studio",

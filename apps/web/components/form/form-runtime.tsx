@@ -100,9 +100,12 @@ export function FormRuntime({
           currentQuestionId: position.currentQuestionId,
           currentPageId: position.currentPageId,
         });
-      } catch {
+      } catch (error) {
         // A failed draft save is not worth interrupting the respondent for: the answers
-        // are still in the store and still on screen, and the next move tries again.
+        // are still in the store and still on screen, and the next move tries again. It
+        // is still logged, because a silent failure here is indistinguishable from a
+        // draft that never saved at all.
+        console.error("draft save failed", error);
       }
     },
     [questions, form.pages, form.layoutMode, saveDraftAsync],

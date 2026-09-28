@@ -42,9 +42,10 @@ export interface AnalyticsState {
 /**
  * The ISO strings the API expects.
  *
- * `to` is the *start* of the last day rather than its end, so a range ending today does
- * not depend on what time it is now — otherwise the last bucket would be a partial day
- * that disagreed with the total.
+ * `to` is the *end* of today, so a response that arrived an hour ago is inside the window.
+ * Ending the range at midnight instead made every total silently exclude today — a creator
+ * who had just received a response saw zero, which is the one number they cannot explain
+ * away. The daily buckets still line up with whole days either way.
  */
 function rangeFromPreset(preset: RangePreset): DateRange {
   const days = RANGE_PRESETS[preset];
@@ -53,14 +54,20 @@ function rangeFromPreset(preset: RangePreset): DateRange {
   from.setDate(from.getDate() - (days - 1));
 
   return {
-    from: from.toISOString(),
-    to: startOfDay(to).toISOString(),
+    from: startOfDay(from).toISOString(),
+    to: endOfDay(to).toISOString(),
   };
 }
 
 function startOfDay(date: Date): Date {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function endOfDay(date: Date): Date {
+  const copy = new Date(date);
+  copy.setHours(23, 59, 59, 999);
   return copy;
 }
 
@@ -82,7 +89,19 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         };
       },
     }),
-    { name: "streamyst:analytics" },
+    {
+      name: "streamyst:analytics",
+      /*
+       * A relative preset is a window, not two dates, so it is recomputed on every load.
+       * Persisting the resolved range meant someone who opened the page on Monday was still
+       * looking at a window ending that Monday the following week.
+       */
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        if (state.preset === "custom") return;
+        state.setPreset(state.preset);
+      },
+    },
   ),
 );
 

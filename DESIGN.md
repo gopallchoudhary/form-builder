@@ -542,3 +542,68 @@ The brand uses surface contrast (`{colors.canvas-soft}` background vs `{colors.c
 - Don't render CTAs as sharp rectangles. The 24 px pill geometry is non-negotiable.
 - Don't pair the green CTA with a green background. The brand always sits Wise green on neutral surfaces (sage / white / ink).
 - Don't replace Wise Sans with a generic geometric sans for hero typography — the proprietary face IS the brand's voice.
+
+---
+
+## As implemented
+
+The rules above describe the brand. This records how they landed in this codebase, and the
+three places where reality differed — because a design system that disagrees with its own
+tokens is worse than one that has none.
+
+### Tokens
+
+Everything resolves through `apps/web/app/globals.css`, in two layers over one Tailwind
+build. The creator console uses the shadcn semantic scale (`--background`, `--card`,
+`--foreground`, `--primary`, `--muted`, `--positive` / `--negative` / `--warning`) so the
+components stay ordinary; the values behind them are the brand's.
+
+| Role | Token | Value |
+| --- | --- | --- |
+| Page | `--background` | `#e8ebe6` sage |
+| Card | `--card` | `#ffffff` |
+| Text | `--foreground` | `#0e0f0c` ink |
+| CTA | `--primary` | `#9fe870` lime |
+| Success | `--positive` | `#2ead4b` — never the lime |
+| Warning | `--warning` | `#ffc091` |
+| Danger | `--negative` | `#d03238` |
+
+Dark mode is the same palette read against ink rather than sage, not a separate design.
+
+### Radius
+
+The scale is written out in full, because four different steps are in use and a single
+`--radius` multiplier cannot express them:
+
+| Step | Value | Used by |
+| --- | --- | --- |
+| `{rounded.sm}` | 8px | badges, chips, small insets |
+| `{rounded.md}` | 12px | inputs, selects, menus |
+| `{rounded.lg}` | 16px | inner cards, the answer well |
+| `{rounded.xl}` | 24px | buttons, cards — the brand signature |
+| `{rounded.pill}` | 9999px | status pills, the progress rail |
+
+### Typography
+
+Local woff2 through `next/font/local`; no network dependency at build. Geist at weight 800
+stands in for the proprietary display face, which `DESIGN.md:373` allows, and Inter carries
+body and sub-display. Display sizes are declared as `--text-display-lg/md/sm` so a headline's
+weight is part of the token rather than a class someone has to remember.
+
+### Chart palette
+
+`--chart-1..5` map to `ink-deep`, `accent-cyan`, `accent-orange`, `positive`, `warning`.
+Lime is excluded on purpose: it is the CTA colour, and a data series that reads as "the
+button" is not a data series. This is the same rule as the success colour, applied to charts.
+
+### Form themes
+
+`data-theme="sage|ink|pale|peach"` remaps the same variables per respondent form, so a form
+can have its own surface without a second stylesheet. `pale` switches its CTA to ink, per
+the rule that a green CTA never sits on green.
+
+### The progress rail
+
+The one signature element. A pill-shaped lime track that fills as the respondent advances,
+segmenting per page in `PAGED` and per question in `STEP`. Everything else stays flat: an
+interface with one memorable thing reads as designed, and one with five reads as decorated.

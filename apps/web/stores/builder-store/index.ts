@@ -64,6 +64,8 @@ export interface BuilderState {
   selectQuestion: (questionId: string | null) => void;
   markSaving: () => void;
   markSaved: (definition: BuilderShape) => void;
+  /** Folds a finished sync's baseline and its local-to-server id map into the store. */
+  reconcileSync: (synced: BuilderShape, idMap: Map<string, string>) => void;
   markSaveError: () => void;
 
   /**
@@ -78,6 +80,14 @@ export interface BuilderState {
    * dumping everything onto page one.
    */
   setLayoutMode: (mode: "STEP" | "PAGED") => void;
+  /**
+   * Records a status the server has just accepted.
+   *
+   * The store holds the definition, so invalidating the query is not enough: the chip
+   * reads `definition.status` and would keep saying "Draft" over a form that is genuinely
+   * live, until somebody reloaded the page.
+   */
+  applyStatus: (status: BuilderShape["status"], publishedAt: string | null) => void;
   updateSettings: (patch: Partial<BuilderShape>) => void;
   renameQuestion: (questionId: string, patch: Partial<BuilderQuestion>) => void;
   setQuestionOrder: (pageId: string | null, questionIds: string[]) => void;
@@ -163,6 +173,57 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
 
     markSaving: () => set({ saveState: "saving" }),
     markSaved: (definition) => set({ saveState: "saved", baseline: definition }),
+
+    /**
+     * Records a completed sync, including the ids the server handed back.
+     *
+     * The baseline always moves to what the server now holds. The id map is applied to
+     * whatever the creator has on screen as well, and that is the part that is easy to
+     * get wrong: a local id that survives in the live definition looks like a question
+     * that has never been created, so the next plan creates it a second time and the
+     * server refuses it as a duplicate. Typing while a save is in flight was enough to
+     * lose the map and wedge the autosave permanently.
+     */
+    reconcileSync: (synced, idMap) =>
+      set((state) => {
+        const remap = (id: string) => idMap.get(id) ?? id;
+        const current = state.definition;
+
+        if (!current) return { saveState: "saved" as const, baseline: synced };
+
+        const remapped: BuilderShape = {
+          ...current,
+          pages: current.pages.map((page) => ({ ...page, id: remap(page.id) })),
+          questions: current.questions.map((question) => {
+            const next: BuilderQuestion = { ...question, id: remap(question.id) };
+            if (question.pageId) next.pageId = remap(question.pageId);
+            return next;
+          }),
+        };
+
+        // Whatever changed while the plan was in flight is still unsaved against the new
+        // baseline, and the next plan will pick it up. Only say "saved" when it is not.
+        const dirty =
+          remapped.questions.length !== synced.questions.length ||
+          remapped.questions.some((question, index) => {
+            const other = synced.questions[index];
+            return !other || other.label !== question.label || other.kind !== question.kind;
+          }) ||
+          remapped.layoutMode !== synced.layoutMode ||
+          remapped.title !== synced.title;
+
+        return {
+          definition: remapped,
+          baseline: synced,
+          // The selection has to follow the ids too, or the inspector loses the question
+          // the creator is in the middle of editing the moment a save lands.
+          selectedQuestionId: state.selectedQuestionId
+            ? remap(state.selectedQuestionId)
+            : null,
+          saveState: dirty ? ("saving" as const) : ("saved" as const),
+        };
+      }),
+
     markSaveError: () => set({ saveState: "error" }),
 
     setLayoutMode: (mode) =>
@@ -196,6 +257,17 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
           ),
         };
       }),
+
+    applyStatus: (status, publishedAt) =>
+      // Not a commit: a status change is not an edit, so it must not become an undo step.
+      set((state) => ({
+        definition: state.definition
+          ? { ...state.definition, status, publishedAt }
+          : state.definition,
+        baseline: state.baseline
+          ? { ...state.baseline, status, publishedAt }
+          : state.baseline,
+      })),
 
     updateSettings: (patch) =>
       commit((definition) => ({ ...definition, ...patch })),

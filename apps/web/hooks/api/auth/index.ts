@@ -1,3 +1,5 @@
+import { useRouter } from "next/navigation";
+
 import { trpc } from "~/trpc/client";
 
 //, sign up hook 
@@ -26,13 +28,16 @@ export const useSignUp = () => {
     isIdle,
     failureCount,
     isSuccess,
-    status
+    status,
+    isPending: status === "pending",
   };
 };
 
 
 //, sign in hook 
 export const useSignIn = () => {
+  const utils = trpc.useUtils();
+
   const {
     mutateAsync: signinUserWithEmailAndPasswordAsync,
     mutate: signinUserWithEmailAndPassword,
@@ -41,7 +46,13 @@ export const useSignIn = () => {
     isIdle,
     failureCount,
     isSuccess,
-  } = trpc.auth.signinUserWithEmailAndPassword.useMutation();
+    isPending,
+  } = trpc.auth.signinUserWithEmailAndPassword.useMutation({
+    onSuccess: async () => {
+      // The session cookie is new, so a cached user is a cache entry waiting to be wrong.
+      await utils.auth.getLoggedInUserInfo.invalidate();
+    },
+  });
 
   return {
     signinUserWithEmailAndPasswordAsync,
@@ -51,10 +62,35 @@ export const useSignIn = () => {
     isIdle,
     failureCount,
     isSuccess,
+    isPending,
   };
 };
 
 export type UserStatus = "loading" | "authenticated" | "anonymous";
+
+/**
+ * Sign out.
+ *
+ * The mutation clears the session cookie, so there is nothing client-side to undo — the
+ * cached user is dropped and the user is sent to the login page in one step. Navigating
+ * without clearing the cache would paint the signed-in sidebar for a frame on a page the
+ * user can no longer load anything on.
+ */
+export const useSignOut = () => {
+  const utils = trpc.useUtils();
+  const router = useRouter();
+
+  const { mutateAsync: signOutUser, isPending, isError, error } =
+    trpc.auth.signOutUser.useMutation({
+      onSuccess: async () => {
+        await utils.auth.getLoggedInUserInfo.invalidate();
+        router.replace("/login");
+        router.refresh();
+      },
+    });
+
+  return { signOutUser, isPending, isError, error };
+};
 
 //, get user info hook 
 

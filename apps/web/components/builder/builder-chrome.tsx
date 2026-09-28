@@ -89,10 +89,28 @@ export function BuilderChrome({
     useSetFormStatus();
 
   const hydrate = useBuilderStore((state) => state.hydrate);
+  const applyStatus = useBuilderStore((state) => state.applyStatus);
   const definition = useBuilderStore((state) => state.definition);
   const saveState = useBuilderStore((state) => state.saveState);
 
-  useAutosave(Boolean(definition));
+  // Returns a function that writes pending changes immediately, so publish never races
+  // the debounce.
+  const flushAutosave = useAutosave(Boolean(definition));
+
+  /**
+   * Publish after the pending autosave has landed.
+   *
+   * Without the flush, a creator who adds a question and immediately clicks Publish
+   * publishes a form the server has not seen a question on yet, and gets told the form has
+   * no questions — true of the server, false of what is on their screen.
+   */
+  const publish = async (status: "PUBLISHED" | "CLOSED") => {
+    await flushAutosave();
+
+    const updated = await setFormStatusAsync({ formId, status });
+    // The chip reads the store, and the store is not refetched by a mutation.
+    applyStatus(updated.status, updated.publishedAt);
+  };
 
   /**
    * Hydrate once per form. Keyed on the id rather than on `form`, because the query
@@ -151,14 +169,14 @@ export function BuilderChrome({
         {isLive ? (
           <Button
             variant="outline"
-            onClick={() => setFormStatusAsync({ formId, status: "CLOSED" })}
+            onClick={() => void publish("CLOSED")}
             disabled={publishStatus === "pending"}
           >
             Close form
           </Button>
         ) : (
           <Button
-            onClick={() => setFormStatusAsync({ formId, status: "PUBLISHED" })}
+            onClick={() => void publish("PUBLISHED")}
             disabled={publishStatus === "pending"}
           >
             {publishStatus === "pending" ? "Publishing…" : "Publish"}
@@ -175,7 +193,7 @@ export function BuilderChrome({
         </p>
       )}
 
-      <FormTabs formId={formId} />
+      <FormTabs formId={formId} onBeforeNavigate={flushAutosave} />
 
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
     </div>

@@ -1,22 +1,9 @@
 "use client";
 
-import * as React from "react";
-import {
-  IconCamera,
-  IconDashboard,
-  IconFileAi,
-  IconFileDescription,
-  IconHelp,
-  IconInnerShadowTop,
-  IconSearch,
-  IconSettings,
-  IconAlignBoxCenterBottom,
-} from "@tabler/icons-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { IconForms, IconLayoutDashboard, IconLogout, type Icon } from "@tabler/icons-react";
 
-import { NavDocuments } from "~/components/nav-documents";
-import { NavMain } from "~/components/nav-main";
-import { NavSecondary } from "~/components/nav-secondary";
-import { NavUser } from "~/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -25,117 +12,110 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "~/components/ui/sidebar";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
+import { useSignOut, useUser } from "~/hooks/api/auth";
+import { cn } from "~/lib/utils";
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
-    },
-    {
-      title: "Forms",
-      url: "/dashboard/forms",
-      icon: IconAlignBoxCenterBottom,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [],
-};
+/**
+ * The creator console's navigation.
+ *
+ * Only real destinations. The template this replaced carried three sections of links
+ * pointing at `#` — "Active Proposals", "Archived", "Get Help" — which is worse than no
+ * navigation: it advertises features that do not exist and teaches people that dead links
+ * are normal here.
+ */
+
+interface NavItem {
+  title: string;
+  url: string;
+  icon: Icon;
+}
+
+const NAV_MAIN: NavItem[] = [
+  { title: "Dashboard", url: "/dashboard", icon: IconLayoutDashboard },
+  { title: "Forms", url: "/dashboard/forms", icon: IconForms },
+];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname();
+  const { user, status } = useUser();
+  const { signOutUser } = useSignOut();
+
+  const displayName = user?.fullName?.trim() || user?.email || "You";
+  const initials = initialsOf(displayName);
+
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:p-1.5!">
-              <a href="#">
-                <IconInnerShadowTop className="size-5!" />
-                <span className="text-base font-semibold">Acme Inc.</span>
-              </a>
+            <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:p-1.5!">
+              <Link href="/dashboard">
+                <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-pill text-[10px] font-bold">
+                  S
+                </span>
+                <span className="text-base font-semibold">Streamyst</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <SidebarMenu>
+          {NAV_MAIN.map((item) => {
+            const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+            return (
+              <SidebarMenuItem key={item.url}>
+                <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                  <Link href={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
       </SidebarContent>
+
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <Avatar className="size-8 rounded-pill">
+            <AvatarFallback className="rounded-pill text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium">
+              {status === "loading" ? "…" : displayName}
+            </p>
+            {user?.email && (
+              <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+            )}
+          </div>
+        </div>
+
+        <Button
+          variant="ghost"
+          className={cn("w-full justify-start gap-2 text-muted-foreground")}
+          onClick={() => signOutUser()}
+        >
+          <IconLogout className="size-4" />
+          Sign out
+        </Button>
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   );
+}
+
+/** Two letters, from whatever the person gave us — a name, or the front of an email. */
+function initialsOf(value: string): string {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return `${words[0]![0]}${words[1]![0]}`.toUpperCase();
 }

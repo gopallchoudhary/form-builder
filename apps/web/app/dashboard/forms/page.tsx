@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { PlusIcon, FileTextIcon, Loader2Icon, ArrowRightIcon, CalendarIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -46,6 +47,7 @@ function formatDate(date: Date | null | undefined): string {
 // ── Create Form Modal ──────────────────────────────────────────────────────────
 function CreateFormModal() {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
   const { createFormAsync, isError, error, status } = useCreateForm();
 
   const {
@@ -60,12 +62,20 @@ function CreateFormModal() {
   const isPending = status === "pending";
 
   const onSubmit: SubmitHandler<CreateFormValues> = async (data) => {
-    await createFormAsync({
+    const created = await createFormAsync({
       title: data.title,
       description: data.description || undefined,
     });
+
     reset();
     setOpen(false);
+
+    /*
+     * Straight to the builder. Somebody who has just named a form wants to put questions
+     * in it, and dropping them back on a list of forms makes them find it again by
+     * recognising the title they just typed.
+     */
+    router.push(`/dashboard/forms/${created.id}/build`);
   };
 
   const handleOpenChange = (next: boolean) => {

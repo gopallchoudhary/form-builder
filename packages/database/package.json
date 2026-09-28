@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "check-types": "tsc --noEmit",
+    "db:create": "dotenv -- node scripts/create-databases.mjs",
     "db:generate": "dotenv -- drizzle-kit generate",
     "db:migrate": "dotenv -- drizzle-kit migrate",
     "db:studio": "dotenv -- drizzle-kit studio",

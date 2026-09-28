@@ -1,13 +1,15 @@
 "use client";
 
-import { cn } from "~/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm, type SubmitHandler } from "react-hook-form";
+
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { useSignIn } from "~/hooks/api/auth";
-import { SubmitHandler, useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { cn } from "~/lib/utils";
 
 type SignInFormValue = {
   email: string;
@@ -15,31 +17,37 @@ type SignInFormValue = {
 };
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
-  const router = useRouter()
-  const { signinUserWithEmailAndPasswordAsync } = useSignIn();
+  const router = useRouter();
+  const { signinUserWithEmailAndPasswordAsync, isError, error, isPending } = useSignIn();
 
-  const { register, handleSubmit } = useForm<SignInFormValue>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignInFormValue>({
     defaultValues: { email: "", password: "" },
   });
 
   const onSubmit: SubmitHandler<SignInFormValue> = async (data) => {
-    console.log("form data: ", data);
-
-    const { id } = await signinUserWithEmailAndPasswordAsync({
+    // No logging of the form values: the password is in there, and a console log is a
+    // permanent record in every screenshot and bug report taken afterwards.
+    await signinUserWithEmailAndPasswordAsync({
       email: data.email,
       password: data.password,
     });
 
-    console.log("user id: ", id);
-    router.replace('/dashboard')
+    router.replace("/dashboard");
+    // The session cookie was just set, so the server-rendered shell has to be re-fetched
+    // or the dashboard layout still renders as though nobody is signed in.
+    router.refresh();
   };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle>Login to your account</CardTitle>
-          <CardDescription>Enter your email below to login to your account</CardDescription>
+          <CardTitle>Sign in</CardTitle>
+          <CardDescription>Enter the email and password you signed up with.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)}>
@@ -49,30 +57,45 @@ export function LoginForm({ className, ...props }: React.ComponentProps<"div">) 
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  autoComplete="email"
                   required
-                  {...register("email")}
+                  {...register("email", { required: "Enter your email" })}
                 />
+                {errors.email && (
+                  <p className="text-destructive text-xs">{errors.email.message}</p>
+                )}
               </Field>
+
               <Field>
-                <div className="flex items-center">
-                  <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <a
-                    href="#"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-                <Input id="password" type="password" required {...register("password")} />
+                <FieldLabel htmlFor="password">Password</FieldLabel>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  {...register("password", { required: "Enter your password" })}
+                />
+                {errors.password && (
+                  <p className="text-destructive text-xs">{errors.password.message}</p>
+                )}
               </Field>
+
+              {isError && (
+                <p role="alert" className="text-destructive text-sm">
+                  {(error as unknown as Error)?.message ??
+                    "That email and password do not match."}
+                </p>
+              )}
+
               <Field>
-                <Button type="submit">Login</Button>
-                <Button variant="outline" type="button">
-                  Login with Google
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? "Signing in…" : "Sign in"}
                 </Button>
                 <FieldDescription className="text-center">
-                  Don&apos;t have an account? <a href="#">Sign up</a>
+                  No account yet?{" "}
+                  <Link href="/signup" className="underline underline-offset-4">
+                    Create one
+                  </Link>
                 </FieldDescription>
               </Field>
             </FieldGroup>

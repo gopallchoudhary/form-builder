@@ -42,3 +42,10 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Playwright
+# Output of a failing run. Committed by accident often enough to be worth ruling out; the
+# CI job uploads the report as an artifact instead.
+/apps/web/test-results/
+/apps/web/playwright-report/
+/apps/web/.playwright-artifacts/

@@ -221,6 +221,19 @@ class AccessService {
     const questions = await this.loadQuestions(session.formId);
     const byId = new Map(questions.map((question) => [question.id, question]));
 
+    /*
+     * A completed session is finished, and this is where a real response used to be lost.
+     *
+     * The respondent's last step and their submit are two requests, and nothing ordered
+     * them. When the draft landed second it rewrote the same rows with `isDraft: true`, so
+     * a response that had been accepted — shown on the thank-you page, counted in the
+     * creator's table a moment earlier — quietly stopped being a response. Ignoring the
+     * write is the whole fix: there is nothing left for the respondent to correct.
+     */
+    if (session.status === "COMPLETED") {
+      return { sessionId: session.id, savedAt: new Date().toISOString() };
+    }
+
     const resolved: { questionId: string; kind: QuestionKind; answer: NormalizedAnswer | null }[] = [];
 
     for (const entry of answers) {

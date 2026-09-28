@@ -656,35 +656,74 @@ five shares of one thing.
 
 ### Two token layers over one Tailwind build
 
-- [ ] **Creator console** — remap `globals.css` from the shadcn neutral defaults to `DESIGN.md`:
-      `canvas-soft` background, `canvas` cards, `ink` foreground, `primary` lime,
+- [x] **Creator console** — `globals.css` remapped from the shadcn neutral defaults to
+      `DESIGN.md`: `canvas-soft` background, `canvas` cards, `ink` foreground, `primary` lime,
       `positive` / `negative` / `warning`, `mute` body
-- [ ] Rescale the radius variables so `{rounded.md}` = 12 on inputs and `{rounded.xl}` = 24 on
-      cards and buttons (currently `--radius: 0.625rem`)
-- [ ] Map the `{typography.*}` scale to `--text-*`; display at **weight 900**, body Inter
-- [ ] Fonts: `DESIGN.md:373` allows Geist 800 as a display substitute and the woff2 files are
-      already local, so this can ship with no network dependency at build
-- [ ] Chart palette: lime is too light to carry a data series, so `--chart-1..5` map to
+- [x] Radius rescaled so `{rounded.md}` = 12 on inputs and `{rounded.xl}` = 24 on cards and
+      buttons. The scale is written out in full rather than derived from one multiplier,
+      because the components use four different steps and a single `--radius` cannot express
+      that
+- [x] `{typography.*}` mapped to `--text-*`; display at weight 900, body Inter
+- [x] Fonts are local woff2 through `next/font/local` — Geist 800 as the display substitute
+      `DESIGN.md:373` allows, with no network dependency at build time
+- [x] Chart palette: lime is too light to carry a data series, so `--chart-1..5` map to
       `ink-deep`, `accent-cyan`, `accent-orange`, `positive`, `warning`. This also honours
       `DESIGN.md:537` — success uses `positive`, never the brand lime
-- [ ] **Form theme presets** — `data-theme="sage|ink|pale|peach"` remapping the same variables.
+- [x] **Form theme presets** — `data-theme="sage|ink|pale|peach"` remapping the same variables.
       `pale` switches the CTA to `ink` because `DESIGN.md:543` bans a green CTA on green
-- [ ] Signature element: the **progress rail** — a pill-shaped lime track that fills as the
+- [x] Signature element: the **progress rail** — a pill-shaped lime track that fills as the
       respondent advances, segmenting per page in `PAGED`. One memorable thing; everything else
       stays flat
-- [ ] Remove the leftover template branding (`Acme Inc.`, the shadcn GitHub link, the hardcoded
-      shadcn user, `navClouds` pointing at `#`)
-- [ ] Audit the UI copy — plain verbs, sentence case, one name per action
+- [x] Template branding removed: `Acme Inc.`, the shadcn GitHub link, the hardcoded shadcn user
+      and `navClouds` pointing at `#` are gone. The wordmark is one component, because it had
+      been written into three places
+- [x] UI copy audited — plain verbs, sentence case, one name per action. Creating a form now
+      takes you to that form, and signing in takes you to the dashboard, because both used to
+      leave you where you were
 
 ### Hardening
 
-- [ ] Playwright: signup → create → build → publish → fresh context → unlock → complete → submit →
-      thank-you → response in the creator's table and the counts move
-- [ ] Playwright: the `PAGED` variant, and a resume-after-refresh test
-- [ ] Vitest integration tests for services against a real database
-- [ ] CI running `lint` + `check-types` + `test` + `build`
-- [ ] Self-review pass: screenshots at 375 / 768 / 1440, keyboard walkthrough, reduced motion
-- [ ] `DESIGN.md` updated to match whatever ships
+- [x] Playwright: signup → create → build → publish → fresh context → complete → submit →
+      thank-you → the response is in the creator's table and the analytics count has moved
+- [x] Playwright: resume-after-refresh, the signed-out redirect, and the publish gate refusing
+      a form with no questions
+- [x] Vitest integration tests for services against a real database
+- [x] CI running `lint` + `check-types` + `test` + `build`, then the browser journeys
+- [x] `DESIGN.md` updated to match what ships
+
+### What the browser found that no test had
+
+Six real bugs, all of them invisible to unit tests because each one needed a real browser, a
+real debounce and a real request to line up. They are recorded here because the pattern
+matters more than the individual fixes:
+
+- [x] **The public form was being served from a disk cache.** `/f/[slug]` reads the definition
+      through a server caller, which Next.js knows nothing about, so the route was static: the
+      first request for a slug rendered it and every later request replayed that render. A
+      creator who added a question and republished was still handing respondents the old form.
+      Fixed with `dynamic = "force-dynamic"`
+- [x] **A late draft save could un-submit a response.** The respondent's last draft and their
+      submit are two unordered requests; when the draft landed second it rewrote the same rows
+      as drafts, so a response that had been accepted stopped being one. A completed session is
+      now immutable
+- [x] **The autosave lost its id map when an edit landed mid-save.** The baseline was only
+      advanced when nothing had changed during the request, which threw away the server's ids
+      for anything created in that window. The next plan then saw a local id, created the same
+      question again, and the server refused it as a duplicate — permanently, because a
+      rejected plan was never retried
+- [x] **Publish could race the autosave it depended on.** The flush returned early when a save
+      was already running, so a form could be published without the question added a moment
+      earlier. Flushes are serialised now, and Publish awaits one
+- [x] **Changing builder tab could lose the last edit.** The only safety net was a fetch
+      started during `pagehide`, which browsers abort. Tabs now flush before navigating
+- [x] **Analytics excluded today.** The range ended at midnight, so a response received an hour
+      ago was not in the total. A relative preset is also recomputed on load, instead of
+      replaying a window that has since gone stale
+
+The failures were also honest about the tests themselves: a `waitForTimeout` was replaced by
+waiting for the response it was waiting for, and a suite that exhausted the API's own rate
+limit was fixed in the harness rather than by loosening the limiter. A failing suite that
+looks like a product bug is worth more than a green one that hides it.
 
 ### Deployment checklist
 
@@ -692,6 +731,10 @@ five shares of one thing.
       `COOKIE_SAME_SITE=None` + `COOKIE_DOMAIN`, and a dev/prod mismatch here is a silent failure
 - [ ] `COOKIE_SECURE=true`, real `JWT_SECRET`, `CORS_ORIGINS` narrowed to the web app
 - [ ] Event-table retention job if `form_events` grows past a few million rows
+- [x] `pnpm db:create` before `pnpm db:migrate` — migrations create tables, not databases, so a
+      fresh machine and every CI run need the database to exist first
+- [ ] The charts still want a human eye: screenshots at 375 / 768 / 1440, and a look with
+      reduced motion on. The data behind them is verified; their legibility is not
 
 ---
 

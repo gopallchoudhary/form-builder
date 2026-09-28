@@ -111,25 +111,25 @@ export default function OverviewPage() {
               <tr className="bg-[#e8ebe6] border-b">
                 <th
                   scope="col"
-                  className="px-4 py-2.5 text-left font-mono text-[10px] tracking-widest uppercase"
+                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
                 >
                   Form
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-2.5 text-left font-mono text-[10px] tracking-widest uppercase"
+                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
                 >
                   Status
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-2.5 text-left font-mono text-[10px] tracking-widest uppercase"
+                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
                 >
                   Opened
                 </th>
                 <th
                   scope="col"
-                  className="px-4 py-2.5 text-left font-mono text-[10px] tracking-widest uppercase"
+                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
                 >
                   Finished
                 </th>

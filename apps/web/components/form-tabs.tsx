@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   BarChart3Icon,
   EyeIcon,
@@ -25,9 +26,22 @@ const TABS = [
 /**
  * Tab navigation for one form. Mounted by every `/dashboard/forms/[formId]/*` page, so a
  * new tab is one entry here plus one page.
+ *
+ * `onBeforeNavigate` exists for the builder, where leaving the tab unmounts the store's
+ * autosave. The autosave is debounced, and a request started while the page is unloading
+ * is aborted by the browser, so a creator who typed a question and went straight to Share
+ * used to lose it. Awaiting the write first is the difference between a tab and a trap.
  */
-export function FormTabs({ formId }: { formId: string }) {
+export function FormTabs({
+  formId,
+  onBeforeNavigate,
+}: {
+  formId: string;
+  onBeforeNavigate?: () => Promise<void>;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [leaving, setLeaving] = useState<string | null>(null);
   const base = `/dashboard/forms/${formId}`;
 
   return (
@@ -45,6 +59,29 @@ export function FormTabs({ formId }: { formId: string }) {
             key={tab.segment}
             href={href}
             aria-current={isActive ? "page" : undefined}
+            aria-busy={leaving === tab.segment || undefined}
+            onClick={(event) => {
+              if (!onBeforeNavigate) return;
+              // Leave modified clicks alone, so open-in-new-tab and middle-click still
+              // work the way a link is supposed to.
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
+
+              event.preventDefault();
+              setLeaving(tab.segment);
+              void onBeforeNavigate().finally(() => {
+                router.push(href);
+                setLeaving(null);
+              });
+            }}
             className={cn(
               "flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors",
               isActive

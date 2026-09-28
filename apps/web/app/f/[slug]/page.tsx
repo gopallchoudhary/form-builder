@@ -7,6 +7,18 @@ import { PublicFormShell } from "./public-form-shell";
 import { getCurrentFormBySlug } from "~/lib/public-form";
 
 /**
+ * Never cached.
+ *
+ * The definition comes from the database through a server caller, which Next.js knows
+ * nothing about, so without this the route is treated as static: the first request for a
+ * slug renders it, and every later request is served that same render from disk. A
+ * creator who added a question and republished was then still handing respondents the
+ * form as it looked before the edit — the most damaging bug this app could have, and one
+ * no unit test would ever catch, because the server was faithfully returning a cache.
+ */
+export const dynamic = "force-dynamic";
+
+/**
  * The public form.
  *
  * The definition is fetched on the server so the first paint is the real form rather than

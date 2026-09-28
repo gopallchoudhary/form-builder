@@ -91,8 +91,26 @@ const byPosition = (a: { position?: string }, b: { position?: string }) =>
     ? 0
     : Number(a.position) - Number(b.position);
 
-function Progress({ value, label }: { value: number; label: string }) {
+/**
+ * The progress rail — the one memorable thing in the product.
+ *
+ * A pill-shaped track that fills as the respondent advances, divided into one segment per
+ * step. In `PAGED` a segment is a page, so the rail reads as "two of three"; in `STEP` it
+ * reads as one tick per question. Segments rather than a continuous bar because a
+ * respondent who abandons mid-page is exactly the thing drop-off analytics is trying to
+ * surface, and a smooth bar hides which step they stopped at.
+ */
+function ProgressRail({
+  value,
+  segments,
+  label,
+}: {
+  value: number;
+  segments: number;
+  label: string;
+}) {
   const percent = Math.round(Math.min(Math.max(value, 0), 1) * 100);
+  const filled = value * segments;
 
   return (
     <div>
@@ -102,14 +120,34 @@ function Progress({ value, label }: { value: number; label: string }) {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={label}
-        className="h-1.5 w-full overflow-hidden rounded-pill bg-[var(--form-surface)]"
+        className="flex gap-1"
       >
-        <div
-          className="h-full rounded-pill bg-[var(--form-accent)] transition-[width] duration-300 motion-reduce:transition-none"
-          style={{ width: `${percent}%` }}
-        />
+        {Array.from({ length: Math.max(segments, 1) }, (_, index) => {
+          // Each segment fills on its own, so a partially-answered page shows a partial
+          // tick rather than snapping to whole steps.
+          const fill = Math.min(Math.max(filled - index, 0), 1);
+
+          return (
+            <span
+              key={index}
+              className="h-1.5 flex-1 overflow-hidden rounded-pill bg-[var(--form-surface)]"
+            >
+              <span
+                className={[
+                  "block h-full rounded-pill transition-[width] duration-500",
+                  "motion-reduce:transition-none",
+                  fill > 0 ? "bg-[var(--form-accent)]" : "bg-transparent",
+                ].join(" ")}
+                style={{ width: `${fill * 100}%` }}
+              />
+            </span>
+          );
+        })}
       </div>
-      <p className="mt-2 text-xs text-[var(--form-muted)]">{percent}% complete</p>
+
+      <p className="mt-2 text-xs text-[var(--form-muted)]">
+        {percent}% · {Math.max(Math.ceil(filled), 1)} of {Math.max(segments, 1)}
+      </p>
     </div>
   );
 }
@@ -235,7 +273,11 @@ export function FormRenderer({
         </header>
 
         {definition.showProgress && total > 0 && (
-          <Progress value={progress} label="Form completion" />
+          <ProgressRail
+            value={progress}
+            segments={isStep ? stepQuestions.length || total : pages.length}
+            label={`Step ${cursor + 1} of ${total}`}
+          />
         )}
 
         {!isStep && page && (
