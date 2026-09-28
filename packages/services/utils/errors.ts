@@ -16,6 +16,17 @@ export type AppErrorKind =
   | "NOT_FOUND"
   | "CONFLICT";
 
+/**
+ * A global symbol, used to brand instances rather than relying on `instanceof`.
+ *
+ * `packages/services` and `@repo/services` can resolve as two separate module
+ * instances — in a test runner, and under a bundler that inlines a workspace package —
+ * and then `error instanceof AppError` is false across the boundary, silently turning
+ * every typed error into an opaque 500. `Symbol.for` returns the same symbol in every
+ * realm and in every copy of this module, so the brand survives duplication.
+ */
+const APP_ERROR = Symbol.for("streamyst.AppError");
+
 export interface AppErrorOptions {
   cause?: unknown;
   /** Structured payload attached to the error, safe to expose to the caller. */
@@ -25,6 +36,8 @@ export interface AppErrorOptions {
 export class AppError extends Error {
   readonly kind: AppErrorKind;
   readonly details?: Record<string, unknown>;
+  /** Brand, so `isAppError` works even across duplicated module instances. */
+  readonly [APP_ERROR] = true;
 
   constructor(kind: AppErrorKind, message: string, options: AppErrorOptions = {}) {
     super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
@@ -66,5 +79,10 @@ export class ConflictError extends AppError {
 }
 
 export function isAppError(error: unknown): error is AppError {
-  return error instanceof AppError;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as Record<symbol, unknown>)[APP_ERROR] === true &&
+    typeof (error as AppError).kind === "string"
+  );
 }

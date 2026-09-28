@@ -3,7 +3,7 @@ import type { OpenApiMeta } from "trpc-to-openapi";
 
 import type { Context } from "./context";
 import { getAuthenticationCookie } from "./utils/cookie";
-import { toTRPCError } from "./utils/errors";
+import { RATE_LIMITS, createRateLimiter } from "./utils/rate-limit";
 import { userService } from "./services";
 
 /** Message used whenever an unexpected failure would otherwise leak internals. */
@@ -23,22 +23,30 @@ export const tRPCContext = initTRPC
 
 export const router = tRPCContext.router;
 
+const baseProcedure = tRPCContext.procedure;
+
+/** A procedure that carries its own rate-limit policy. */
+function withRateLimit(policy: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS]) {
+  const consume = createRateLimiter(policy);
+
+  return baseProcedure.use(
+    tRPCContext.middleware(async (opts) => {
+      await consume(opts.ctx.clientIp ?? "unknown");
+      return opts.next();
+    }),
+  );
+}
+
+/** Open to the public, rate limited so one caller cannot flood the API. */
+export const publicProcedure = withRateLimit(RATE_LIMITS.public);
+
 /**
- * Every procedure starts here so that service-layer `AppError`s become typed
- * tRPC errors in exactly one place.
+ * For anything an unauthenticated caller can retry against — a password, a submission.
+ * Tight enough that guessing a form password is not practical.
  */
-const baseProcedure = tRPCContext.procedure.use(
-  tRPCContext.middleware(async (opts) => {
-    try {
-      return await opts.next();
-    } catch (error) {
-      throw toTRPCError(error);
-    }
-  }),
-);
+export const sensitivePublicProcedure = withRateLimit(RATE_LIMITS.sensitive);
 
-export const publicProcedure = baseProcedure;
-
+/** Requires a valid session cookie, and is not rate limited on IP. */
 export const authenticatedProcedure = baseProcedure.use(async (opts) => {
   const { ctx } = opts;
 

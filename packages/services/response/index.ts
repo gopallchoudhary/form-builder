@@ -1,6 +1,7 @@
-import { and, asc, count, db as defaultDb, desc, eq, gte, ilike, inArray, lte, or, type Database, sql } from "@repo/database";
+import { and, asc, count, db as defaultDb, desc, eq, gte, ilike, inArray, isNull, lte, or, type Database, sql } from "@repo/database";
 import { formAnswersTable } from "@repo/database/models/form-answer";
 import { formSessionsTable } from "@repo/database/models/form-session";
+import { questionsTable } from "@repo/database/models/question";
 
 import { formatNumericAnswer } from "../utils/answer-validation";
 import { assertFormOwnership } from "../utils/ownership";
@@ -132,6 +133,15 @@ class ResponseService {
 
     await assertFormOwnership(formId, userId, this.db);
 
+    // Columns come from the form's questions, not from the answers — otherwise an
+    // export with no responses would have no question columns at all, and one with
+    // partial responses would have a different column set depending on who answered.
+    const questions = await this.db
+      .select({ id: questionsTable.id, label: questionsTable.label, labelKey: questionsTable.labelKey })
+      .from(questionsTable)
+      .where(and(eq(questionsTable.formId, formId), isNull(questionsTable.deletedAt)))
+      .orderBy(asc(questionsTable.position));
+
     const sessions = await this.db
       .select({
         sessionId: formSessionsTable.id,
@@ -145,29 +155,19 @@ class ResponseService {
 
     const answersBySession = await this.answersFor(sessions.map((session) => session.sessionId));
 
-    // One column per question, keyed by label so the header reads the way the creator
-    // wrote the question. Questions nobody answered still get a column.
-    const columns = new Map<string, string>();
-    for (const session of sessions) {
-      for (const answer of answersBySession.get(session.sessionId) ?? []) {
-        const key = answer.questionLabelKey ?? answer.questionId;
-        if (!columns.has(key)) columns.set(key, answer.questionLabel ?? key);
-      }
-    }
-
     const header = [
       "Response",
       "Status",
       "Started at",
       "Completed at",
       "Duration (seconds)",
-      ...columns.values(),
+      ...questions.map((question) => question.label),
     ];
 
     const rows = sessions.map((session) => {
-      const byKey = new Map(
+      const byQuestion = new Map(
         (answersBySession.get(session.sessionId) ?? []).map((answer) => [
-          answer.questionLabelKey ?? answer.questionId,
+          answer.questionId,
           stringifyAnswer(answer),
         ]),
       );
@@ -178,8 +178,8 @@ class ResponseService {
         session.startedAt.toISOString(),
         session.completedAt?.toISOString() ?? "",
         durationInSeconds(session.startedAt, session.completedAt)?.toString() ?? "",
-        ...columns.keys(),
-      ].map((cell, index) => (index < 5 ? cell : (byKey.get(cell) ?? "")));
+        ...questions.map((question) => byQuestion.get(question.id) ?? ""),
+      ];
     });
 
     return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");

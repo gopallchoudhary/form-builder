@@ -94,7 +94,7 @@ const createContext = createContextFactory({
 const openApiDocument = generateOpenApiDocument(serverRouter, {
   title: "Streamyst OpenAPI",
   version: "1.0.0",
-  baseUrl: `${env.BASE_URL.replace(/\/+$/, "")}/api`,
+  baseUrl: `${env.API_BASE_URL.replace(/\/+$/, "")}/api`,
   // Sessions are httpOnly cookies, not bearer tokens. Describing them as such keeps
   // the generated docs honest about how a client actually authenticates.
   securitySchemes: {

@@ -279,29 +279,55 @@ Goal: all business logic, each service owning its zod input models and enforcing
 
 Goal: expose the services as a typed, documented API.
 
-- [ ] Context: add a rate-limit middleware keyed on `ctx.clientIp`
-- [ ] `form` router — `createForm` `getForm` `updateFormSettings` `listForms` `deleteForm`
-      `publishForm` `unpublishForm`
-- [ ] `formPage` router — `createPage` `updatePage` `deletePage` `reorderPages`
-- [ ] `question` router — `createQuestion` `updateQuestion` `deleteQuestion`
-      `duplicateQuestion` `reorderQuestions`
-- [ ] `public` router — `getFormBySlug` `unlockForm` `resumeSession` `saveDraft` `submitForm`
-      (all `protect: false`, all rate limited, tighter limits on `unlockForm` and `submitForm`)
-- [ ] `response` router — `listResponses` `exportCsv`
-- [ ] `analytics` router — `getFormAnalytics` `getOverviewAnalytics`
-- [ ] `auth` router — add the new procedures
-- [ ] `.meta({ openapi })` on every procedure, with `summary` and correct `protect`
-- [ ] Delete `packages/trpc/server/schema.ts` (`zodUndefinedModel` is unused now)
-- [ ] Verify the OpenAPI document at `/docs`
+- [x] Context: rate limiting keyed on `ctx.clientIp`, with `RATE_LIMITS` in
+      `utils/rate-limit.ts` and `resetRateLimits` for tests
+- [x] `form` router — `createForm` `listForms` `getForm` `getFormSettings` `updateFormSettings`
+      `setFormPassword` `updateFormSlug` `setFormStatus` `deleteForm`
+- [x] `formPage` router — `listPages` `createPage` `updatePage` `deletePage` `reorderPages`
+- [x] `question` router — `listQuestions` `getQuestion` `createQuestion` `updateQuestion`
+      `deleteQuestion` `duplicateQuestion` `reorderQuestions`
+- [x] `public` router — `getFormBySlug` `unlockForm` `startSession` `getSession` `saveDraft`
+      `submitForm` (all `protect: false`, all rate limited, tighter limits on `unlockForm` and
+      `submitForm`)
+- [x] `response` router — `listResponses` `exportCsv` `deleteResponse`
+- [x] `analytics` router — `getFormAnalytics` `getFunnel` `getQuestionDropOff`
+      `getAnswerDistribution` `getTimeToComplete` `getOverview`
+- [x] `auth` router — the new procedures
+- [x] `.meta({ openapi })` on every procedure, with `summary` and correct `protect`
+- [x] Delete `packages/trpc/server/schema.ts` (`zodUndefinedModel` is unused now)
+- [x] Verify the OpenAPI document — `apps/api/tests/openapi.test.ts` generates it and asserts
+      the new paths, so schema/meta drift fails the suite rather than shipping silently
+
+### Design notes
+
+- **Errors are converted in the services layer, not in a middleware.** tRPC v11's
+  `callRecursive` catches an error and returns it as a *value* (`{ ok: false, error }`),
+  re-throwing only after the chain unwinds, so a middleware's `await next()` never rejects and
+  a `try`/`catch` around it cannot see a resolver error. Every service error was reaching the
+  client as a 500. `utils/handler.ts` was the first attempt at a per-resolver wrapper and was
+  deleted in favour of `typedService()` in `server/services/index.ts`, which decorates the
+  service instances with a `Proxy`. One place, and a procedure cannot forget it.
+- **CSV columns come from the form's questions, not from its answers.** Sourcing them from
+  `form_answers` meant an export of a form with no responses had no question columns at all,
+  and partial responses produced a different column set depending on who had answered.
+- `listForms` takes no client input; the `userId` comes from the session.
+- `setFormStatus` is one procedure for publish/unpublish/close, because publishing is the gate
+  between the builder and the audience and is where fillability is validated.
+- `getForm` returns the whole definition for the builder store; `getFormSettings` is the
+  lighter read for panels that only need settings.
+- No zod `.refine()` on a top-level input: `trpc-to-openapi` crashes while building the
+  document for them. The closed-form check for `thankYouRedirectUrl` lives in the service.
 
 ### Tests
 
-- [ ] Supertest against the Express app: auth, ownership, validation, rate limits, 404s
+- [x] Supertest against the Express app: auth, ownership, validation, 404s, CSV export,
+      analytics — `apps/api/tests/api.test.ts`
+- [x] OpenAPI document generation — `apps/api/tests/openapi.test.ts`
 
 ### Gate
 
-- [ ] `pnpm lint` / `check-types` / `test` green
-- [ ] OpenAPI document reviewed by hand
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 239/239 · `pnpm build` 2/2
+- [x] OpenAPI document asserted in a test rather than reviewed by hand
 
 ---
 

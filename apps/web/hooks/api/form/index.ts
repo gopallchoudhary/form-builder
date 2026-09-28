@@ -1,13 +1,5 @@
 import { trpc } from "~/trpc/client";
 
-/**
- * Form and question hooks.
- *
- * Every mutation that changes a question invalidates both the single-question cache
- * and the whole-form list, because the builder mirrors server state in a local
- * store and a stale cache silently undoes the optimistic update.
- */
-
 //, create form
 export const useCreateForm = () => {
   const utils = trpc.useUtils();
@@ -30,65 +22,53 @@ export const useListForms = () => {
   return { forms, isLoading, isFetching, isError, error, refetch };
 };
 
-//, create question
-export const useCreateQuestion = () => {
-  const utils = trpc.useUtils();
+//, the whole editable form — what the builder hydrates from
+export const useGetForm = (formId: string | null) => {
+  const { data: form, isLoading, isFetching, isError, error, refetch } =
+    trpc.form.getForm.useQuery({ formId: formId ?? "" }, { enabled: !!formId });
 
-  const { mutateAsync: createQuestionAsync, status, isError, error } =
-    trpc.form.createQuestion.useMutation({
-      onSuccess: async (data, variables) => {
-        await utils.form.getQuestion.invalidate({ questionId: data.id });
-        await utils.form.listQuestions.invalidate({ formId: variables.formId });
-      },
-    });
-
-  return { createQuestionAsync, status, isError, error };
+  return { form, isLoading, isFetching, isError, error, refetch };
 };
 
-//, update question
-export const useUpdateQuestion = () => {
+//, update form settings
+export const useUpdateFormSettings = () => {
   const utils = trpc.useUtils();
 
-  const { mutateAsync: updateQuestionAsync, status, isError, error } =
-    trpc.form.updateQuestion.useMutation({
+  const { mutateAsync: updateFormSettingsAsync, status, isError, error } =
+    trpc.form.updateFormSettings.useMutation({
       onSuccess: async (data) => {
-        await utils.form.getQuestion.invalidate({ questionId: data.id });
-        // No formId is available here, so every form's list is invalidated.
-        await utils.form.listQuestions.invalidate();
+        await utils.form.getForm.invalidate({ formId: data.id });
+        await utils.form.listForms.invalidate();
       },
     });
 
-  return { updateQuestionAsync, status, isError, error };
+  return { updateFormSettingsAsync, status, isError, error };
 };
 
-//, delete question
-export const useDeleteQuestion = () => {
+//, publish / unpublish / close
+export const useSetFormStatus = () => {
   const utils = trpc.useUtils();
 
-  const { mutateAsync: deleteQuestionAsync, status, isError, error } =
-    trpc.form.deleteQuestion.useMutation({
-      onSuccess: async (data, variables) => {
-        await utils.form.getQuestion.invalidate({ questionId: data.id });
-        await utils.form.getQuestion.invalidate({ questionId: variables.questionId });
-        await utils.form.listQuestions.invalidate();
+  const { mutateAsync: setFormStatusAsync, status, isError, error } =
+    trpc.form.setFormStatus.useMutation({
+      onSuccess: async (data) => {
+        await utils.form.getForm.invalidate({ formId: data.id });
+        await utils.form.listForms.invalidate();
       },
     });
 
-  return { deleteQuestionAsync, status, isError, error };
+  return { setFormStatusAsync, status, isError, error };
 };
 
-//, get question
-export const useGetQuestion = (questionId: string | null) => {
-  const { data: question, isLoading, isFetching, isError, error, refetch } =
-    trpc.form.getQuestion.useQuery({ questionId: questionId ?? "" }, { enabled: !!questionId });
+export const useDeleteForm = () => {
+  const utils = trpc.useUtils();
 
-  return { question, isLoading, isFetching, isError, error, refetch };
-};
+  const { mutateAsync: deleteFormAsync, status, isError, error } =
+    trpc.form.deleteForm.useMutation({
+      onSuccess: async () => {
+        await utils.form.listForms.invalidate();
+      },
+    });
 
-//, list questions of a form
-export const useListQuestions = (formId: string | null) => {
-  const { data: questions, isLoading, isFetching, isError, error, refetch } =
-    trpc.form.listQuestions.useQuery({ formId: formId ?? "" }, { enabled: !!formId });
-
-  return { questions, isLoading, isFetching, isError, error, refetch };
+  return { deleteFormAsync, status, isError, error };
 };

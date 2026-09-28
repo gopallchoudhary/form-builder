@@ -38,7 +38,7 @@ import {
   useDeleteQuestion,
   useGetQuestion,
   useListQuestions,
-} from "~/hooks/api/form";
+} from "~/hooks/api/question";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

@@ -230,6 +230,10 @@ class FormService {
     if (thankYouMessage !== undefined) updateData.thankYouMessage = thankYouMessage;
     if (thankYouRedirectUrl !== undefined) updateData.thankYouRedirectUrl = thankYouRedirectUrl;
 
+    if (Object.keys(updateData).length === 0) {
+      throw new ConflictError("No fields to update");
+    }
+
     await this.db.update(formsTable).set(updateData).where(eq(formsTable.id, formId));
 
     return this.getFormById(userId, formId);

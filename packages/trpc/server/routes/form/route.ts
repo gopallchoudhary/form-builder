@@ -1,28 +1,29 @@
-import { authenticatedProcedure, router } from "../../trpc";
-import { formService, questionService } from "../../services";
+import { formService } from "../../services";
 import { generatePath } from "../../utils/path-generator";
 import {
   createFormInputModel,
-  createFormOutputModel,
-  createQuestionInputModel,
-  createQuestionOutputModel,
-  deleteQuestionInputModel,
-  deleteQuestionOutputModel,
-  getQuestionInputModel,
-  getQuestionOutputModel,
+  createFormOutputSchema,
+  deleteFormInputModel,
+  formOutputSchema,
+  formSettingsOutputSchema,
+  getFormInputModel,
+  idOutputSchema,
   listFormsInputModel,
-  listFormsOutputModel,
-  listQuestionsInputModel,
-  listQuestionsOutputModel,
-  updateQuestionInputModel,
-  updateQuestionOutputModel,
+  listFormsOutputSchema,
+  setFormPasswordInputModel,
+  setFormStatusInputModel,
+  setPasswordOutputSchema,
+  slugOutputSchema,
+  updateFormSettingsInputModel,
+  updateFormSlugInputModel,
 } from "./model";
+
+import { authenticatedProcedure, router } from "../../trpc";
 
 const TAGS = ["Form"];
 const getPath = generatePath("/form");
 
 export const formRouter = router({
-  //. create form
   createForm: authenticatedProcedure
     .meta({
       openapi: {
@@ -34,12 +35,9 @@ export const formRouter = router({
       },
     })
     .input(createFormInputModel)
-    .output(createFormOutputModel)
-    .mutation(async ({ input, ctx }) => {
-      return formService.createForm(ctx.user.id, input);
-    }),
+    .output(createFormOutputSchema)
+    .mutation(({ input, ctx }) => formService.createForm(ctx.user.id, input)),
 
-  //. list forms
   listForms: authenticatedProcedure
     .meta({
       openapi: {
@@ -51,96 +49,110 @@ export const formRouter = router({
       },
     })
     .input(listFormsInputModel)
-    .output(listFormsOutputModel)
-    .query(async ({ ctx }) => {
-      return formService.listFormsByUserId({ userId: ctx.user.id });
-    }),
+    .output(listFormsOutputSchema)
+    .query(({ ctx }) => formService.listFormsByUserId({ userId: ctx.user.id })),
 
-  //. create question
-  createQuestion: authenticatedProcedure
+  /** The whole editable form. What the builder store hydrates from. */
+  getForm: authenticatedProcedure
     .meta({
       openapi: {
-        method: "POST",
-        path: getPath("/createQuestion"),
+        method: "GET",
+        path: getPath("/getForm"),
         tags: TAGS,
         protect: true,
-        summary: "Add a question to one of your forms",
+        summary: "Get one of your forms, with its pages and questions",
       },
     })
-    .input(createQuestionInputModel)
-    .output(createQuestionOutputModel)
-    .mutation(async ({ input, ctx }) => {
-      const { id, labelKey } = await questionService.createQuestion(ctx.user.id, input);
-      return { id, labelKey };
-    }),
+    .input(getFormInputModel)
+    .output(formOutputSchema)
+    .query(({ input, ctx }) => formService.getFullDefinition(ctx.user.id, input)),
 
-  //. update question
-  updateQuestion: authenticatedProcedure
+  /** Settings only, for panels that do not need the pages and questions. */
+  getFormSettings: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/getFormSettings"),
+        tags: TAGS,
+        protect: true,
+        summary: "Get the settings of one of your forms",
+      },
+    })
+    .input(getFormInputModel)
+    .output(formSettingsOutputSchema)
+    .query(({ input, ctx }) => formService.getFormById(ctx.user.id, input.formId)),
+
+  updateFormSettings: authenticatedProcedure
     .meta({
       openapi: {
         method: "PATCH",
-        path: getPath("/updateQuestion"),
+        path: getPath("/updateFormSettings"),
         tags: TAGS,
         protect: true,
-        summary: "Update a question of one of your forms",
+        summary: "Update the settings of one of your forms",
       },
     })
-    .input(updateQuestionInputModel)
-    .output(updateQuestionOutputModel)
-    .mutation(async ({ input, ctx }) => {
-      const { id } = await questionService.updateQuestion(ctx.user.id, input);
-      return { id };
-    }),
+    .input(updateFormSettingsInputModel)
+    .output(formSettingsOutputSchema)
+    .mutation(({ input, ctx }) => formService.updateSettings(ctx.user.id, input)),
 
-  //. delete question
-  deleteQuestion: authenticatedProcedure
+  setFormPassword: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/setFormPassword"),
+        tags: TAGS,
+        protect: true,
+        summary: "Set or remove the password an audience needs to open a form",
+      },
+    })
+    .input(setFormPasswordInputModel)
+    .output(setPasswordOutputSchema)
+    .mutation(({ input, ctx }) => formService.setPassword(ctx.user.id, input)),
+
+  updateFormSlug: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: "PATCH",
+        path: getPath("/updateFormSlug"),
+        tags: TAGS,
+        protect: true,
+        summary: "Change the share slug. Existing QR codes will stop working.",
+      },
+    })
+    .input(updateFormSlugInputModel)
+    .output(slugOutputSchema)
+    .mutation(({ input, ctx }) => formService.updateSlug(ctx.user.id, input)),
+
+  /**
+   * One procedure for the whole status lifecycle. Publishing is the gate between the
+   * builder and the audience, and is where the form is checked for being fillable.
+   */
+  setFormStatus: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/setFormStatus"),
+        tags: TAGS,
+        protect: true,
+        summary: "Publish, unpublish or close one of your forms",
+      },
+    })
+    .input(setFormStatusInputModel)
+    .output(formSettingsOutputSchema)
+    .mutation(({ input, ctx }) => formService.setStatus(ctx.user.id, input)),
+
+  deleteForm: authenticatedProcedure
     .meta({
       openapi: {
         method: "DELETE",
-        path: getPath("/deleteQuestion"),
+        path: getPath("/deleteForm"),
         tags: TAGS,
         protect: true,
-        summary: "Remove a question from one of your forms",
+        summary: "Delete one of your forms, with every response it collected",
       },
     })
-    .input(deleteQuestionInputModel)
-    .output(deleteQuestionOutputModel)
-    .mutation(async ({ input, ctx }) => {
-      const { id } = await questionService.deleteQuestion(ctx.user.id, input);
-      return { id };
-    }),
-
-  //. get question
-  getQuestion: authenticatedProcedure
-    .meta({
-      openapi: {
-        method: "GET",
-        path: getPath("/getQuestion"),
-        tags: TAGS,
-        protect: true,
-        summary: "Get one of your questions",
-      },
-    })
-    .input(getQuestionInputModel)
-    .output(getQuestionOutputModel)
-    .query(async ({ input, ctx }) => {
-      return questionService.getQuestion(ctx.user.id, input);
-    }),
-
-  //. list questions
-  listQuestions: authenticatedProcedure
-    .meta({
-      openapi: {
-        method: "GET",
-        path: getPath("/listQuestions"),
-        tags: TAGS,
-        protect: true,
-        summary: "List the questions of one of your forms, in order",
-      },
-    })
-    .input(listQuestionsInputModel)
-    .output(listQuestionsOutputModel)
-    .query(async ({ input, ctx }) => {
-      return questionService.listQuestions(ctx.user.id, input);
-    }),
+    .input(deleteFormInputModel)
+    .output(idOutputSchema)
+    .mutation(({ input, ctx }) => formService.deleteForm(ctx.user.id, input)),
 });

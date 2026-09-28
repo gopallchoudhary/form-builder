@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { isAppError, type AppErrorKind } from "@repo/services/utils/errors";
+import { isAppError, type AppError, type AppErrorKind } from "@repo/services/utils/errors";
 
 const TRPC_ERROR_CODES: Record<AppErrorKind, TRPCError["code"]> = {
   BAD_REQUEST: "BAD_REQUEST",
@@ -18,27 +18,37 @@ const HTTP_STATUS: Record<AppErrorKind, number> = {
   CONFLICT: 409,
 };
 
-/** Returns null when the error is unexpected, i.e. a bug that must not be detailed. */
-export function appErrorToHttpStatus(error: unknown): number | null {
-  return isAppError(error) ? HTTP_STATUS[error.kind] : null;
+function fromAppError(error: AppError): TRPCError {
+  return new TRPCError({
+    code: TRPC_ERROR_CODES[error.kind],
+    message: error.message,
+    cause: error,
+  });
 }
 
 /**
- * Services raise `AppError`; this is the one place that decides what a client
- * sees. Anything that is not an `AppError` or a `TRPCError` is a bug and is
- * deliberately left as an `Error` so the `errorFormatter` in `trpc.ts` scrubs
- * its message.
+ * Services raise `AppError`; this is the one place that decides what a client sees.
+ *
+ * The unwrap branch matters: tRPC converts anything thrown by the resolver into an
+ * INTERNAL_SERVER_ERROR *inside* the middleware chain, keeping the original on `cause`.
+ * So by the time an outer middleware catches it, the error is already a TRPCError
+ * carrying an AppError — without unwrapping, every typed service error would reach the
+ * client as an opaque 500.
  */
 export function toTRPCError(error: unknown): Error {
-  if (error instanceof TRPCError) return error;
+  if (isAppError(error)) return fromAppError(error);
 
-  if (isAppError(error)) {
-    return new TRPCError({
-      code: TRPC_ERROR_CODES[error.kind],
-      message: error.message,
-      cause: error,
-    });
+  if (error instanceof TRPCError) {
+    if (error.code === "INTERNAL_SERVER_ERROR" && isAppError(error.cause)) {
+      return fromAppError(error.cause);
+    }
+    return error;
   }
 
   return error instanceof Error ? error : new Error("Non-error thrown", { cause: error });
+}
+
+/** Returns null when the error is unexpected, i.e. a bug that must not be detailed. */
+export function appErrorToHttpStatus(error: unknown): number | null {
+  return isAppError(error) ? HTTP_STATUS[error.kind] : null;
 }

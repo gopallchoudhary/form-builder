@@ -24,28 +24,29 @@ export type GetFormInputType = z.input<typeof getFormInput>;
 /**
  * Form-level settings. Every field is optional so a single call can change one thing.
  *
- * `closesAt` and `thankYou*` are presentation and policy rather than structure, which
- * is why they can change while the form is live without bumping `version`.
+ * There is deliberately no `.refine()` on this schema: `trpc-to-openapi` calls `.omit()`
+ * on the top-level input to build the request body, and Zod forbids that on a refined
+ * schema. The "did you actually change anything" check lives in the service instead,
+ * where it can throw a `ConflictError` with a message aimed at the creator.
+ *
+ * `closesAt` and `thankYou*` are presentation and policy rather than structure, which is
+ * why they can change while the form is live without bumping `version`.
  */
-export const updateFormSettingsInput = z
-  .object({
-    formId: z.string().min(1).describe("ID of the form to update"),
-    title: z.string().trim().min(1).max(120).optional().describe("Updated title"),
-    description: z.string().trim().max(300).nullable().optional().describe("Updated description"),
-    layoutMode: z.enum(["STEP", "PAGED"]).optional().describe("Updated layout"),
-    themeKey: formThemeKeySchema.optional().describe("Updated theme preset"),
-    showProgress: z.boolean().optional().describe("Show a progress indicator"),
-    allowBack: z.boolean().optional().describe("Let respondents go back"),
-    oneResponsePerDevice: z.boolean().optional().describe("Only one submission per device"),
-    maxResponses: z.number().int().positive().max(1_000_000).nullable().optional(),
-    closesAt: z.iso.datetime().nullable().optional().describe("When the form stops accepting"),
-    thankYouTitle: z.string().trim().max(120).nullable().optional(),
-    thankYouMessage: z.string().trim().max(2000).nullable().optional(),
-    thankYouRedirectUrl: z.url().nullable().optional().describe("Where to send respondents after"),
-  })
-  .refine((input) => Object.keys(input).length > 1, {
-    message: "No fields to update",
-  });
+export const updateFormSettingsInput = z.object({
+  formId: z.string().min(1).describe("ID of the form to update"),
+  title: z.string().trim().min(1).max(120).optional().describe("Updated title"),
+  description: z.string().trim().max(300).nullable().optional().describe("Updated description"),
+  layoutMode: z.enum(["STEP", "PAGED"]).optional().describe("Updated layout"),
+  themeKey: formThemeKeySchema.optional().describe("Updated theme preset"),
+  showProgress: z.boolean().optional().describe("Show a progress indicator"),
+  allowBack: z.boolean().optional().describe("Let respondents go back"),
+  oneResponsePerDevice: z.boolean().optional().describe("Only one submission per device"),
+  maxResponses: z.number().int().positive().max(1_000_000).nullable().optional(),
+  closesAt: z.iso.datetime().nullable().optional().describe("When the form stops accepting"),
+  thankYouTitle: z.string().trim().max(120).nullable().optional(),
+  thankYouMessage: z.string().trim().max(2000).nullable().optional(),
+  thankYouRedirectUrl: z.url().nullable().optional().describe("Where to send respondents after"),
+});
 
 export type UpdateFormSettingsInputType = z.input<typeof updateFormSettingsInput>;
 

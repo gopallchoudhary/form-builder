@@ -1,98 +1,76 @@
 import { z } from "zod";
 
+import { formPageDefinitionSchema, questionDefinitionSchema } from "@repo/services/form/model";
+
 // Input schemas are owned by the service layer — this module only re-exports them
-// so route files keep a stable import surface.
+// so route files keep a stable import surface. Only the output schemas live here.
 //
 // Note: `listForms` deliberately takes no client input. The service schema
 // `listFormsByUserIdInput` includes the userId, which the route derives from the
 // session rather than accepting it from the caller.
-export { createFormInput as createFormInputModel } from "@repo/services/form/model";
 export {
-  createQuestionInput as createQuestionInputModel,
-  updateQuestionInput as updateQuestionInputModel,
-  deleteQuestionInput as deleteQuestionInputModel,
-  getQuestionInput as getQuestionInputModel,
-  listQuestionsInput as listQuestionsInputModel,
-  questionKindSchema as questionKindModel,
-} from "@repo/services/question/model";
+  createFormInput as createFormInputModel,
+  deleteFormInput as deleteFormInputModel,
+  getFormInput as getFormInputModel,
+  setFormPasswordInput as setFormPasswordInputModel,
+  setFormStatusInput as setFormStatusInputModel,
+  updateFormSettingsInput as updateFormSettingsInputModel,
+  updateFormSlugInput as updateFormSlugInputModel,
+} from "@repo/services/form/model";
 
-// ── Form procedures ────────────────────────────────────────────────────────────
+// ── Outputs ────────────────────────────────────────────────────────────────────
 
-export const createFormOutputModel = z.object({
+export const formSettingsOutputSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  layoutMode: z.enum(["STEP", "PAGED"]),
+  themeKey: z.string(),
+  status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]),
+  showProgress: z.boolean(),
+  allowBack: z.boolean(),
+  oneResponsePerDevice: z.boolean(),
+  maxResponses: z.number().int().nullable(),
+  closesAt: z.date().nullable(),
+  thankYouTitle: z.string().nullable(),
+  thankYouMessage: z.string().nullable(),
+  thankYouRedirectUrl: z.string().nullable(),
+  version: z.number().int(),
+  publishedAt: z.date().nullable(),
+  createdAt: z.date().nullable(),
+  updatedAt: z.date().nullable(),
+});
+
+export const formOutputSchema = formSettingsOutputSchema.extend({
+  pages: z.array(formPageDefinitionSchema),
+  questions: z.array(questionDefinitionSchema),
+});
+
+export const createFormOutputSchema = z.object({
   id: z.string().describe("Id of the created form"),
   slug: z.string().describe("Share slug for the public URL"),
 });
 
-/** The signed-in user's own forms — nothing to accept from the caller. */
 export const listFormsInputModel = z.undefined();
 
-export const listFormsOutputModel = z.array(
+export const listFormsOutputSchema = z.array(
   z.object({
-    id: z.string().describe("Id of the form"),
-    slug: z.string().describe("Share slug for the public URL"),
-    title: z.string().describe("Title of the form"),
-    description: z.string().nullable().optional().describe("Description of the form"),
-    status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]).describe("Publication state"),
-    createdAt: z.date().nullable().describe("When the form was created"),
-    updatedAt: z.date().nullable().describe("When the form was last updated"),
+    id: z.string(),
+    slug: z.string(),
+    title: z.string(),
+    description: z.string().nullable(),
+    status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]),
+    createdAt: z.date().nullable(),
+    updatedAt: z.date().nullable(),
   }),
 );
 
-// ── Shared question output shape ───────────────────────────────────────────────
+export const idOutputSchema = z.object({ id: z.string() });
 
-export const questionOutputModel = z.object({
-  id: z.string().describe("Id of the question"),
-  formId: z.string().describe("Id of the owning form"),
-  pageId: z.string().nullable().describe("Page this question sits on, if any"),
-  position: z.string().nullable().describe("Fractional index for ordering"),
-  kind: z.enum([
-    "SHORT_TEXT",
-    "LONG_TEXT",
-    "NUMBER",
-    "EMAIL",
-    "PHONE",
-    "PASSWORD",
-    "YES_NO",
-    "SINGLE_CHOICE",
-    "MULTI_CHOICE",
-    "DROPDOWN",
-    "RATING",
-    "DATE",
-    "ADDRESS",
-  ]).describe("Question input type"),
-  label: z.string().describe("Human-readable label"),
-  labelKey: z.string().describe("Stable slug key — write-once"),
-  description: z.string().nullable().optional().describe("Helper text"),
-  placeholder: z.string().nullable().optional().describe("Placeholder text"),
-  isRequired: z.boolean().describe("Whether an answer is required"),
-  settings: z.unknown().describe("Per-kind configuration, validated per kind"),
-  createdAt: z.date().nullable().describe("When the question was created"),
-  updatedAt: z.date().nullable().describe("When the question was last updated"),
+export const slugOutputSchema = z.object({ slug: z.string() });
+
+export const setPasswordOutputSchema = z.object({
+  formId: z.string(),
+  passwordProtected: z.boolean(),
 });
-
-// ── createQuestion ─────────────────────────────────────────────────────────────
-
-export const createQuestionOutputModel = z.object({
-  id: z.string().describe("Id of the created question"),
-  labelKey: z.string().describe("Generated stable slug key"),
-});
-
-// ── updateQuestion ─────────────────────────────────────────────────────────────
-
-export const updateQuestionOutputModel = z.object({
-  id: z.string().describe("Id of the updated question"),
-});
-
-// ── deleteQuestion ─────────────────────────────────────────────────────────────
-
-export const deleteQuestionOutputModel = z.object({
-  id: z.string().describe("Id of the deleted question"),
-});
-
-// ── getQuestion ────────────────────────────────────────────────────────────────
-
-export const getQuestionOutputModel = questionOutputModel;
-
-// ── listQuestions ──────────────────────────────────────────────────────────────
-
-export const listQuestionsOutputModel = z.array(questionOutputModel);

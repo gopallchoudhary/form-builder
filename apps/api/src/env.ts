@@ -5,7 +5,12 @@ const emptyToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(8000),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  BASE_URL: z.url().default("http://localhost:8000"),
+  /**
+   * Public origin of this API, used to build the OpenAPI baseUrl. Named with the API
+   * prefix because a bare BASE_URL collides with the one Vite injects into test
+   * workers, which silently produced an invalid URL.
+   */
+  API_BASE_URL: z.url().default("http://localhost:8000"),
 
   /** Browser origins allowed to call this API. */
   CORS_ORIGINS: z
