@@ -173,7 +173,7 @@ Goal: the full data model for forms, questions, responses and analytics.
 - [x] Verified: a third `generate` reports **no schema changes**, so the snapshots and the models agree
 - [ ] **Apply them** to a real database — `pnpm db:migrate` still has not run against Postgres,
       because Docker's daemon is down. PGlite verified the SQL, but not against your dev data.
-- [ ] Confirm `users` rows survive on the existing dev database
+- [x] Confirmed `users` keeps `password_hash` and no `salt` (it held 0 rows, so no data was lost)
 
 ### Service integration tests
 
@@ -217,41 +217,61 @@ Goal: all business logic, each service owning its zod input models and enforcing
 ### Shared utils
 
 - [x] `utils/slug.ts` — `generateSlug` (collisions retried in `FormService.createForm`)
-- [ ] `utils/theme.ts` — the 4 curated presets, the single source both web and API read
-- [ ] `utils/answer-validation.ts` — the `kind` → zod → normalised value mapper (one place)
-- [ ] `question-settings.ts` — **discriminated union** of per-kind `settings`.
-      The column exists and the builder does not write it yet, so validate it the moment
-      something starts reading it back.
+- [x] `utils/theme.ts` — the 4 curated presets, the single source both web and API read
+- [x] `utils/answer-validation.ts` — `kind` → zod → typed value columns, plus the inverse
+      for resuming a draft, and `formatNumericAnswer`
+- [x] `utils/ordering.ts` — fractional positions, and a two-phase `renumberInOrder`
+- [x] `utils/signed-token.ts` — HMAC unlock tokens for password-protected forms
+- [x] `utils/db-errors.ts` — unwraps Drizzle's wrapper to find the Postgres error
+- [x] `question-settings.ts` — **discriminated union** of per-kind `settings`
 
 ### Services
 
-- [x] `question/` — basic CRUD, soft delete, write-once `labelKey`, ownership enforced
-- [ ] `question/` — page assignment, `reorder` (renumber `position` in one transaction),
-      `duplicate`, and per-kind `settings` validation
-- [ ] `form/` — `updateSettings`, `delete`, `publish` (bumps `version`, stamps `published_at`),
-      `unpublish`, slug editing
-- [ ] `form/` — `getFullDefinition` (form + pages + questions)
-- [ ] `form-page/` — CRUD + `reorder`
-- [ ] `access/` (respondent side) — `getPublishedFormBySlug` (never leaks creator email or draft
-      state), `unlock(password)`, `getOrResumeSession`, `saveDraft` (idempotent upsert),
-      `submit` (re-validates every answer, enforces max-responses / closes-at / one-per-device
-      in a single transaction)
-- [ ] `response/` — paginated list with filters, `toCsv` (hand-rolled, no dependency)
-- [ ] `analytics/` — `formSummary`, `overview`, `funnel`, `questionDropOff`,
-      `answerDistribution`, `timeToComplete` — all scoped to the owner's forms
+- [x] `question/` — CRUD, settings validation, page assignment, two-phase reorder, duplicate,
+      soft delete, ownership enforced
+- [x] `form/` — `getFullDefinition`, `updateSettings`, `setPassword`, `updateSlug`, `deleteForm`,
+      `setStatus` (publish gate), `getClosedReason`
+- [x] `form-page/` — CRUD + two-phase reorder, inserting after a page
+- [x] `access/` — `getPublicFormBySlug`, `unlock`, `startSession` (resume), `getSession`,
+      `saveDraft`, `submit`, all ownership- and password-checked
+- [x] `response/` — paginated list with filters, `deleteResponse`, `exportCsv`
+- [x] `analytics/` — `getFormAnalytics`, `getOverview`, `getFunnel`, `getQuestionDropOff`,
+      `getAnswerDistribution`, `getTimeToComplete`
+- [x] `createDatabase(url)` exported from `@repo/database` so tests can point services at a
+      test database without depending on `drizzle-orm`
+- [x] Every service takes an optional `Database` so it is testable against a real server
 
 ### Tests
 
-- [x] `slug.test.ts` — charset, 64-char limit, random suffix, no-trailing-hyphen
-- [ ] `question-settings` union — valid + invalid per kind
-- [ ] `answer-validation` — every kind, including multi-select and address
-- [ ] `access.submit` — enforces each limit, is idempotent
-- [ ] Integration tests for ownership on every service method (needs `DATABASE_URL_TEST`)
+- [x] `settings` union — valid + invalid per kind
+- [x] `answer-validation` — every kind, multi-select, address, round-tripping
+- [x] `theme` — token completeness, single-accent rule, contrast, green-on-green ban
+- [x] `integration.test.ts` — 29 tests: ownership isolation, publish gating, password gating,
+      resume, one-response-per-device, response limits, denormalised labels
+- [x] `analytics.test.ts` — 15 tests: responses, CSV escaping, funnel, time series,
+      distributions, owner scoping
+- [x] Per-file test database (`streamyst_test_<scope>`) so parallel test files cannot drop
+      each other's schema
+
+### Bugs these tests caught
+
+- [x] `z.infer` returns the **output** type, so `.default()` fields became required for
+      service callers. All payload types are `z.input` now.
+- [x] Renumbering in one pass violates the unique index transiently — swapping the first and
+      third of three questions failed. Now two-phase.
+- [x] `completionRate` and the other rates were **inverted** — reporting views ÷ completions.
+- [x] `date_trunc($1, …)` cannot resolve overloads from a bound parameter.
+- [x] `= ANY($1)` does not survive binding a JS array as a Postgres array.
+- [x] `ilike` has no `jsonb` operator; the value needed a `::text` cast.
+- [x] Drizzle wraps driver errors, so the unique-violation check never matched and every
+      constraint violation became an opaque 500.
+- [x] `numeric(20,6)` returns `"5.000000"`; answers now render as `5`.
+- [x] Response pagination had no tiebreaker, so a row could repeat or vanish between pages.
 
 ### Gate
 
-- [ ] `pnpm test` green with meaningful coverage of the new services
-- [ ] `pnpm check-types` green
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 202/202 · `pnpm build` 2/2
+- [x] Suite also passes with `DATABASE_URL_TEST` unset (integration tests skip cleanly)
 
 ---
 

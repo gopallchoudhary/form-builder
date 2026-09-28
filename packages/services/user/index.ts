@@ -1,5 +1,5 @@
 import * as JWT from "jsonwebtoken";
-import { db, eq } from "@repo/database";
+import { db as defaultDb, eq, type Database } from "@repo/database";
 import { usersTable, type SelectUser } from "@repo/database/models/user";
 
 import { env } from "../env";
@@ -25,8 +25,9 @@ const INVALID_CREDENTIALS = "Incorrect email or password";
 const TOKEN_TTL = "7d";
 
 class UserService {
+  constructor(private readonly db: Database = defaultDb) {}
   private async getUserByEmail(email: string): Promise<SelectUser | null> {
-    const rows = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    const rows = await this.db.select().from(usersTable).where(eq(usersTable.email, email));
     return rows[0] ?? null;
   }
 
@@ -47,7 +48,7 @@ class UserService {
 
   //. get user info by id
   public async getUserInfoById(id: string) {
-    const user = await db
+    const user = await this.db
       .select({
         id: usersTable.id,
         email: usersTable.email,
@@ -74,7 +75,7 @@ class UserService {
 
     const passwordHash = await hashPassword(password);
 
-    const inserted = await db
+    const inserted = await this.db
       .insert(usersTable)
       .values({ email, fullName, passwordHash })
       .returning({ id: usersTable.id });
