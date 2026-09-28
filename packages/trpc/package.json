@@ -2,11 +2,16 @@
   "name": "@repo/trpc",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/express": "^5.0.6",
     "dotenv-cli": "^11.0.0",
+    "eslint": "^9.39.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {

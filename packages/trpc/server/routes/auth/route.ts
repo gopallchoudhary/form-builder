@@ -1,82 +1,99 @@
+import { z } from "zod";
 
-import { string } from "zod";
-import { z, zodUndefinedModel } from "../../schema";
 import { userService } from "../../services";
 import { authenticatedProcedure, publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
-import { createUserWithEmailAndPasswordInputModel, createUserWithEmailAndPasswordOutputModel, getLoggedInUserInfoInputModel, getLoggedInUserInfoOutputModel, signInUserWithEmailAndPasswordInputModel, signInUserWithEmailAndPasswordOutputModel } from "./model";
-import { getAuthenticationCookie, setAuthenticationCookie } from "../../utils/cookie";
-import { createNextApiHandler } from "@trpc/server/adapters/next";
+import {
+  clearAuthenticationCookie,
+  setAuthenticationCookie,
+} from "../../utils/cookie";
+import {
+  createUserWithEmailAndPasswordInputModel,
+  createUserWithEmailAndPasswordOutputModel,
+  getLoggedInUserInfoInputModel,
+  getLoggedInUserInfoOutputModel,
+  signInUserWithEmailAndPasswordInputModel,
+  signInUserWithEmailAndPasswordOutputModel,
+  signOutUserOutputModel,
+} from "./model";
 
 const TAGS = ["Authentication"];
 const getPath = generatePath("/authentication");
 
 export const authRouter = router({
-  //. create User
+  //. create user
   createUserWithEmailAndPassword: publicProcedure
-    .meta({openapi: {
-      method: 'POST',
-      path: getPath('/createUserWithEmailAndPassword'),
-      tags: TAGS
-    }})
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/createUserWithEmailAndPassword"),
+        tags: TAGS,
+        summary: "Create an account and sign in",
+      protect: false,
+      },
+    })
     .input(createUserWithEmailAndPasswordInputModel)
     .output(createUserWithEmailAndPasswordOutputModel)
-    .mutation( async ({input, ctx}) => {
-      const {email, fullName, password} = input
-      const {id, token} = await userService.createUserWithEmailAndPassword({
-        fullName, email, password
-      })
+    .mutation(async ({ input, ctx }) => {
+      const { id, token } = await userService.createUserWithEmailAndPassword(input);
 
-      setAuthenticationCookie(ctx, token)
-      
-    
-      return {
-        id
-      }
+      setAuthenticationCookie(ctx, token);
+
+      return { id };
     }),
 
-  //. signin User
-    signinUserWithEmailAndPassword: publicProcedure
-        .meta({openapi: {
-            method: 'POST',
-            path: getPath('/signinUserWithEmailAndPassword'),
-            tags: TAGS
-        }})
-        .input(signInUserWithEmailAndPasswordInputModel)
-        .output(signInUserWithEmailAndPasswordOutputModel)
-        .mutation( async ({input, ctx}) => {
-            const {email, password} = input
-            const {id, token} = await userService.signInUserWithEmailAndPassword({
-                email, password
-            })
-            
-            setAuthenticationCookie(ctx, token)
-            
-            return {
-                id
-            }
-        }),
+  //. sign in
+  signinUserWithEmailAndPassword: publicProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/signinUserWithEmailAndPassword"),
+        tags: TAGS,
+        summary: "Sign in with email and password",
+      protect: false,
+      },
+    })
+    .input(signInUserWithEmailAndPasswordInputModel)
+    .output(signInUserWithEmailAndPasswordOutputModel)
+    .mutation(async ({ input, ctx }) => {
+      const { id, token } = await userService.signInUserWithEmailAndPassword(input);
 
-  //. get logged in user info 
-    getLoggedInUserInfo: authenticatedProcedure
-        .meta({openapi: {
-            method: 'GET',
-            path: getPath('/getLoggedInUserInfo'),
-            tags: TAGS,
-            protect: true
-        }})
-        .input(getLoggedInUserInfoInputModel)
-        .output(getLoggedInUserInfoOutputModel)
-        .query(async({ctx}) => {
-            
-            
-            const {id, email, fullName, profileImageUrl} =  await userService.getUserInfoById(ctx.user.id)
+      setAuthenticationCookie(ctx, token);
 
-            return {
-              id,
-              email,
-              fullName,
-              profileImageUrl
-            }
-        })
+      return { id };
+    }),
+
+  //. sign out — the session is a stateless JWT, so clearing the cookie is enough
+  signOutUser: publicProcedure
+    .meta({
+      openapi: {
+        method: "POST",
+        path: getPath("/signOutUser"),
+        tags: TAGS,
+        summary: "Clear the session cookie",
+      protect: false,
+      },
+    })
+    .input(z.undefined())
+    .output(signOutUserOutputModel)
+    .mutation(async ({ ctx }) => {
+      clearAuthenticationCookie(ctx);
+    }),
+
+  //. get logged in user info
+  getLoggedInUserInfo: authenticatedProcedure
+    .meta({
+      openapi: {
+        method: "GET",
+        path: getPath("/getLoggedInUserInfo"),
+        tags: TAGS,
+        protect: true,
+        summary: "Get the currently signed-in user",
+      },
+    })
+    .input(getLoggedInUserInfoInputModel)
+    .output(getLoggedInUserInfoOutputModel)
+    .query(async ({ ctx }) => {
+      return userService.getUserInfoById(ctx.user.id);
+    }),
 });

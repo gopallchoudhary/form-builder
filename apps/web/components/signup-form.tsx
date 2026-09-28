@@ -5,7 +5,6 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
-import { trpc } from "~/trpc/client";
 import { useSignUp } from "~/hooks/api/auth";
 import { SubmitHandler, useForm } from "react-hook-form";
 
@@ -17,15 +16,7 @@ type SignUpFormValues = {
 };
 
 export function SignupForm({ className, ...props }: React.ComponentProps<"div">) {
-  const {
-    createUserWithEmailAndPasswordAsync,
-    createUserWithEmailAndPassword,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-  } = useSignUp();
+  const { createUserWithEmailAndPasswordAsync } = useSignUp();
 
   const { register, handleSubmit } = useForm<SignUpFormValues>({
     defaultValues: {

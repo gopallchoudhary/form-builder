@@ -8,6 +8,20 @@
       "when": 1780780463956,
       "tag": "0000_careful_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790566061175,
+      "tag": "0001_drop_legacy_password_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790566069332,
+      "tag": "0002_add_user_password_hash",
+      "breakpoints": true
     }
   ]
 }

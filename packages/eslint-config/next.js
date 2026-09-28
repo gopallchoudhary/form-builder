@@ -33,6 +33,21 @@ export const nextJsConfig = [
         ...globals.serviceworker,
       },
     },
+    rules: {
+      ...pluginReact.configs.flat.recommended.rules,
+      // TypeScript already checks prop types; the runtime rule only produces noise
+      // on typed components.
+      "react/prop-types": "off",
+    },
+  },
+  {
+    // Build-time config files run in Node, not the browser.
+    files: ["env.js", "next.config.js", "*.config.{js,ts,mjs,cjs}"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
   },
   {
     plugins: {

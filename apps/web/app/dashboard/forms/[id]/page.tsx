@@ -588,7 +588,7 @@ const FormBuilderPage = () => {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
 
-  const { fields: fetchedFields, isLoading: isFetchingFields } = useListFields(formId);
+  const { fields: fetchedFields } = useListFields(formId);
 
   useEffect(() => {
     if (fetchedFields) {

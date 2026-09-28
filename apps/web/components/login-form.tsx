@@ -16,7 +16,7 @@ type SignInFormValue = {
 
 export function LoginForm({ className, ...props }: React.ComponentProps<"div">) {
   const router = useRouter()
-  const { signinUserWithEmailAndPasswordAsync, signinUserWithEmailAndPassword } = useSignIn();
+  const { signinUserWithEmailAndPasswordAsync } = useSignIn();
 
   const { register, handleSubmit } = useForm<SignInFormValue>({
     defaultValues: { email: "", password: "" },

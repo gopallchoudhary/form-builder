@@ -1,193 +1,141 @@
-import { db, eq } from '@repo/database'
-import { formFieldsTable } from '@repo/database/models/form-field'
-import {
-    createFieldInput, CreateFieldInputType,
-    updateFieldInput, UpdateFieldInputType,
-    deleteFieldInput, DeleteFieldInputType,
-    getFieldInput, GetFieldInputType,
-} from './model'
+import { db, eq } from "@repo/database";
+import { formFieldsTable } from "@repo/database/models/form-field";
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
-// Converts a label into a stable slug used as the labelKey.
-// Only called once at field creation time — never on updates.
-function toLabelKey(label: string): string {
-    return label
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')   // strip non-alphanumeric chars
-        .replace(/\s+/g, '-')            // spaces → hyphens
-        .replace(/-+/g, '-')             // collapse multiple hyphens
-        .slice(0, 50)                    // respect DB column length
-}
+import { ConflictError, NotFoundError } from "../utils/errors";
+import { assertFieldOwnership, assertFormOwnership } from "../utils/ownership";
+import { toLabelKey } from "./label-key";
+import {
+  createFieldInput,
+  type CreateFieldInputType,
+  deleteFieldInput,
+  type DeleteFieldInputType,
+  getFieldInput,
+  type GetFieldInputType,
+  listFieldsInput,
+  type ListFieldsInputType,
+  updateFieldInput,
+  type UpdateFieldInputType,
+} from "./model";
+
+const FIELD_COLUMNS = {
+  id: formFieldsTable.id,
+  label: formFieldsTable.label,
+  labelKey: formFieldsTable.labelKey,
+  placeholder: formFieldsTable.placeholder,
+  description: formFieldsTable.description,
+  isRequired: formFieldsTable.isRequired,
+  type: formFieldsTable.type,
+  index: formFieldsTable.index,
+  formId: formFieldsTable.formId,
+  createdAt: formFieldsTable.createdAt,
+  updatedAt: formFieldsTable.updatedAt,
+} as const;
 
 class FormFieldService {
+  //. create field
+  public async createField(userId: string, payload: CreateFieldInputType) {
+    const { formId, label, placeholder, description, isRequired, type, index } =
+      await createFieldInput.parseAsync(payload);
 
-    //. get field by id (private — used internally by update/delete for existence checks)
-    private async getFieldById(fieldId: string) {
-        const result = await db
-            .select()
-            .from(formFieldsTable)
-            .where(eq(formFieldsTable.id, fieldId))
+    await assertFormOwnership(formId, userId);
 
-        if (!result || result.length === 0) {
-            throw new Error(`Field with id ${fieldId} does not exist`)
-        }
+    // labelKey is write-once and never updated
+    const labelKey = toLabelKey(label);
+    if (!labelKey) throw new ConflictError("Label must contain at least one letter or digit");
 
-        return result[0]!
+    const inserted = await db
+      .insert(formFieldsTable)
+      .values({ formId, label, labelKey, placeholder, description, isRequired, type, index })
+      .returning({ id: formFieldsTable.id });
+
+    if (!inserted || inserted.length === 0 || !inserted[0]?.id) {
+      throw new Error("Insert of the field returned no rows");
     }
 
-    //. create field
-    public async createField(payload: CreateFieldInputType) {
-        const {
-            formId,
-            label,
-            placeholder,
-            description,
-            isRequired,
-            type,
-            index,
-        } = await createFieldInput.parseAsync(payload)
+    return { id: inserted[0].id, labelKey };
+  }
 
-        // Derive labelKey from label — write-once, never updated
-        const labelKey = toLabelKey(label)
+  //. update field
+  public async updateField(userId: string, payload: UpdateFieldInputType) {
+    const { fieldId, label, placeholder, description, isRequired, type, index } =
+      await updateFieldInput.parseAsync(payload);
 
-        const insertResult = await db
-            .insert(formFieldsTable)
-            .values({
-                formId,
-                label,
-                labelKey,
-                placeholder,
-                description,
-                isRequired,
-                type,
-                index,
-            })
-            .returning({ id: formFieldsTable.id })
+    await assertFieldOwnership(fieldId, userId);
 
-        if (!insertResult || insertResult.length === 0 || !insertResult[0]?.id) {
-            throw new Error('Something went wrong while creating the field')
-        }
+    // Build only the fields that were actually provided
+    const updateData: Partial<{
+      label: string;
+      placeholder: string;
+      description: string;
+      isRequired: boolean;
+      type: "TEXT" | "NUMBER" | "EMAIL" | "YES_NO" | "PASSWORD";
+      index: string;
+    }> = {};
 
-        return {
-            id: insertResult[0].id,
-            labelKey,
-        }
+    if (label !== undefined) updateData.label = label;
+    if (placeholder !== undefined) updateData.placeholder = placeholder;
+    if (description !== undefined) updateData.description = description;
+    if (isRequired !== undefined) updateData.isRequired = isRequired;
+    if (type !== undefined) updateData.type = type;
+    if (index !== undefined) updateData.index = index;
+
+    if (Object.keys(updateData).length === 0) {
+      throw new ConflictError("No fields to update");
     }
 
-    //. update field
-    public async updateField(payload: UpdateFieldInputType) {
-        const {
-            fieldId,
-            label,
-            placeholder,
-            description,
-            isRequired,
-            type,
-            index,
-        } = await updateFieldInput.parseAsync(payload)
+    // NOTE: labelKey is intentionally never updated — it is write-once
+    const updated = await db
+      .update(formFieldsTable)
+      .set(updateData)
+      .where(eq(formFieldsTable.id, fieldId))
+      .returning({ id: formFieldsTable.id });
 
-        // Confirm field exists before updating
-        await this.getFieldById(fieldId)
-
-        // Build only the fields that were actually provided
-        const updateData: Partial<{
-            label: string
-            placeholder: string
-            description: string
-            isRequired: boolean
-            type: 'TEXT' | 'NUMBER' | 'EMAIL' | 'YES_NO' | 'PASSWORD'
-            index: string
-        }> = {}
-
-        if (label !== undefined)       updateData.label = label
-        if (placeholder !== undefined) updateData.placeholder = placeholder
-        if (description !== undefined) updateData.description = description
-        if (isRequired !== undefined)  updateData.isRequired = isRequired
-        if (type !== undefined)        updateData.type = type
-        if (index !== undefined)       updateData.index = index
-
-        // NOTE: labelKey is intentionally never updated — it is write-once
-
-        const updateResult = await db
-            .update(formFieldsTable)
-            .set(updateData)
-            .where(eq(formFieldsTable.id, fieldId))
-            .returning({ id: formFieldsTable.id })
-
-        if (!updateResult || updateResult.length === 0) {
-            throw new Error('Something went wrong while updating the field')
-        }
-
-        return { id: fieldId }
+    if (!updated || updated.length === 0) {
+      throw new Error("Update of the field returned no rows");
     }
 
-    //. delete field
-    public async deleteField(payload: DeleteFieldInputType) {
-        const { fieldId } = await deleteFieldInput.parseAsync(payload)
+    return { id: fieldId };
+  }
 
-        // Confirm field exists before deleting
-        await this.getFieldById(fieldId)
+  //. delete field
+  public async deleteField(userId: string, payload: DeleteFieldInputType) {
+    const { fieldId } = await deleteFieldInput.parseAsync(payload);
 
-        await db
-            .delete(formFieldsTable)
-            .where(eq(formFieldsTable.id, fieldId))
+    await assertFieldOwnership(fieldId, userId);
 
-        return { id: fieldId }
-    }
+    await db.delete(formFieldsTable).where(eq(formFieldsTable.id, fieldId));
 
-    //. get field
-    public async getField(payload: GetFieldInputType) {
-        const { fieldId } = await getFieldInput.parseAsync(payload)
+    return { id: fieldId };
+  }
 
-        const field = await db
-            .select({
-                id: formFieldsTable.id,
-                label: formFieldsTable.label,
-                labelKey: formFieldsTable.labelKey,
-                placeholder: formFieldsTable.placeholder,
-                description: formFieldsTable.description,
-                isRequired: formFieldsTable.isRequired,
-                type: formFieldsTable.type,
-                index: formFieldsTable.index,
-                formId: formFieldsTable.formId,
-                createdAt: formFieldsTable.createdAt,
-                updatedAt: formFieldsTable.updatedAt,
-            })
-            .from(formFieldsTable)
-            .where(eq(formFieldsTable.id, fieldId))
+  //. get field
+  public async getField(userId: string, payload: GetFieldInputType) {
+    const { fieldId } = await getFieldInput.parseAsync(payload);
 
-        if (!field || field.length === 0) {
-            throw new Error(`Field with id ${fieldId} does not exist`)
-        }
+    await assertFieldOwnership(fieldId, userId);
 
-        return field[0]!
-    }
-    //. list fields
-    public async listFields(payload: import('./model').ListFieldsInputType) {
-        const { listFieldsInput } = await import('./model')
-        const { formId } = await listFieldsInput.parseAsync(payload)
+    const field = await db
+      .select(FIELD_COLUMNS)
+      .from(formFieldsTable)
+      .where(eq(formFieldsTable.id, fieldId));
 
-        const fields = await db
-            .select({
-                id: formFieldsTable.id,
-                label: formFieldsTable.label,
-                labelKey: formFieldsTable.labelKey,
-                placeholder: formFieldsTable.placeholder,
-                description: formFieldsTable.description,
-                isRequired: formFieldsTable.isRequired,
-                type: formFieldsTable.type,
-                index: formFieldsTable.index,
-                formId: formFieldsTable.formId,
-                createdAt: formFieldsTable.createdAt,
-                updatedAt: formFieldsTable.updatedAt,
-            })
-            .from(formFieldsTable)
-            .where(eq(formFieldsTable.formId, formId))
-            .orderBy(formFieldsTable.index)
+    if (!field || field.length === 0) throw new NotFoundError("Field does not exist");
 
-        return fields
-    }
+    return field[0]!;
+  }
+
+  //. list fields of a form
+  public async listFields(userId: string, payload: ListFieldsInputType) {
+    const { formId } = await listFieldsInput.parseAsync(payload);
+
+    await assertFormOwnership(formId, userId);
+
+    return db
+      .select(FIELD_COLUMNS)
+      .from(formFieldsTable)
+      .where(eq(formFieldsTable.formId, formId))
+      .orderBy(formFieldsTable.index);
+  }
 }
 
-export default FormFieldService
+export default FormFieldService;

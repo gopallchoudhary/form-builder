@@ -2,18 +2,22 @@
   "name": "@repo/services",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.3",
     "dotenv-cli": "^11.0.0",
+    "eslint": "^9.39.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@repo/database": "workspace:*",
     "@repo/logger": "workspace:*",
-    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.3",
     "zod": "^4.3.5"
   }

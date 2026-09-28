@@ -1,10 +1,14 @@
 {
   "name": "@repo/logger",
   "version": "1.0.0",
-  "scripts": {},
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
+  },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "eslint": "^9.39.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {

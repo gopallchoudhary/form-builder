@@ -2,7 +2,6 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   entry: ["./src/index.ts"],
-  noExternal: ["@synapse"], // transpile packages starting with `@teachyst` and their dependencies
   splitting: false,
   bundle: true,
   outDir: "./dist",
@@ -10,5 +9,6 @@ export default defineConfig({
   env: { IS_SERVER_BUILD: "true" },
   loader: { ".json": "copy" },
   minify: true,
-  sourcemap: false,
+  // Keep stack traces readable in production; the payload is not cacheable anyway.
+  sourcemap: true,
 });

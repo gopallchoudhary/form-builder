@@ -25,6 +25,14 @@ export const config = [
     plugins: {
       onlyWarn,
     },
+    rules: {
+      // A leading underscore marks an intentionally unused parameter, which Express
+      // requires for error-handler signatures.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
   },
   {
     ignores: ["dist/**"],

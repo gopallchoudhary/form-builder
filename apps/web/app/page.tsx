@@ -2,8 +2,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useUser } from "~/hooks/api/auth";
-import { trpc } from "~/trpc/client";
-import { api } from "~/trpc/server";
 
 export default function Home() {
   const router = useRouter();
@@ -15,7 +13,7 @@ export default function Home() {
     } else {
       router.replace("/login");
     }
-  }, [user]);
+  }, [user, router]);
   return (
     <main className="min-h-screen min-w-screen flex justify-center items-center">
       <div>{JSON.stringify(user)}</div>

@@ -17,8 +17,12 @@ export const usersTable = pgTable("users", {
 
   profileImageUrl: text("profile_image_url"),
 
-  salt: text('salt').notNull(),
-  password: text('password'),
+  /**
+   * scrypt hash in the self-describing form `scrypt$N$r$p$salt$key`.
+   * The salt and cost parameters are embedded, so there is no separate salt column.
+   * Nullable to support password-less (e.g. OAuth-only) accounts.
+   */
+  passwordHash: text("password_hash"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").$onUpdate(() => new Date()),
