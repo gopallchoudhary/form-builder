@@ -1,4 +1,9 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+import { FormStateScreen } from "~/components/form/form-states";
+import { ThankYouCard } from "./thank-you-card";
+import { getCurrentFormBySlug } from "~/lib/public-form";
 
 export const metadata: Metadata = {
   title: "Thank you",
@@ -8,21 +13,24 @@ export const metadata: Metadata = {
 /**
  * Where a submission lands.
  *
- * The copy comes from the form's thank-you settings, which the respondent has already
- * seen the slug of — so this is a plain confirmation, and the settings redirect is
- * handled by the form itself.
+ * The copy comes from the form's own thank-you settings, because that is what the creator
+ * wrote for the people who answered. A creator's redirect is honoured, but only after the
+ * confirmation has been seen — bouncing straight to an external site skips the only thing
+ * this page is for.
  */
-export default function ThanksPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-[#e8ebe6] px-4">
-      <div className="max-w-sm rounded-xl bg-white p-8 text-center">
-        <h1 className="text-2xl font-bold tracking-tight text-[#0e0f0c]">
-          Thank you
-        </h1>
-        <p className="mt-2 text-sm text-[#454745]">
-          Your response has been recorded.
-        </p>
-      </div>
-    </main>
-  );
+export default async function ThanksPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const result = await getCurrentFormBySlug(slug);
+
+  if (!result.ok) notFound();
+
+  if (!result.form) {
+    return <FormStateScreen reason="NOT_FOUND" />;
+  }
+
+  return <ThankYouCard form={result.form} />;
 }

@@ -317,6 +317,90 @@ describe.skipIf(!servicesAvailable)("responses and analytics", () => {
       expect(overview.forms[0]!.id).toBe(first.formId);
     });
 
+    it("records a question view as the respondent moves, and reads it back as drop-off", async () => {
+      const form = await seedForm();
+
+      /*
+       * Drop-off is measured over *completed* sessions — the population the form was
+       * finished by — so both respondents here submit. The rating is optional, which is
+       * what makes the difference between them visible at all: one visits it, one skips
+       * it, and that is exactly the signal the chart is for.
+       */
+
+      // One respondent walks both questions and answers both.
+      const thorough = await access.startSession({ slug: form.slug, deviceId: device(1) });
+      await access.saveDraft({
+        sessionId: thorough.sessionId,
+        deviceId: device(1),
+        answers: [{ questionId: form.nameId, value: "Gopal" }],
+        currentQuestionId: form.nameId,
+      });
+      await access.saveDraft({
+        sessionId: thorough.sessionId,
+        deviceId: device(1),
+        answers: [],
+        currentQuestionId: form.ratingId,
+      });
+      await access.submit({
+        sessionId: thorough.sessionId,
+        deviceId: device(1),
+        answers: [
+          { questionId: form.nameId, value: "Gopal" },
+          { questionId: form.ratingId, value: 5 },
+        ],
+      });
+
+      // The other stops after the first question and submits.
+      const brisk = await access.startSession({ slug: form.slug, deviceId: device(2) });
+      await access.saveDraft({
+        sessionId: brisk.sessionId,
+        deviceId: device(2),
+        answers: [{ questionId: form.nameId, value: "Priya" }],
+        currentQuestionId: form.nameId,
+      });
+      await access.submit({
+        sessionId: brisk.sessionId,
+        deviceId: device(2),
+        answers: [{ questionId: form.nameId, value: "Priya" }],
+      });
+
+      const dropOff = await analytics.getQuestionDropOff(owner.id, { formId: form.formId });
+      const byQuestion = new Map(dropOff.map((row) => [row.questionId, row]));
+
+      // Everybody saw the first question; only one of them ever reached the second.
+      expect(byQuestion.get(form.nameId)?.reached).toBe(2);
+      expect(byQuestion.get(form.nameId)?.answered).toBe(2);
+      expect(byQuestion.get(form.ratingId)?.reached).toBe(1);
+      expect(byQuestion.get(form.ratingId)?.answered).toBe(1);
+    });
+
+    it("does not record a question view when the respondent has not moved", async () => {
+      const form = await seedForm();
+      const session = await access.startSession({ slug: form.slug, deviceId: device(1) });
+
+      // Three saves that all name the same question: one view, not three. A respondent
+      // editing one answer must not inflate the funnel.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await access.saveDraft({
+          sessionId: session.sessionId,
+          deviceId: device(1),
+          answers: [{ questionId: form.nameId, value: "Gopal" }],
+          currentQuestionId: form.nameId,
+        });
+      }
+
+      await access.submit({
+        sessionId: session.sessionId,
+        deviceId: device(1),
+        answers: [{ questionId: form.nameId, value: "Gopal" }],
+      });
+
+      const dropOff = await analytics.getQuestionDropOff(owner.id, { formId: form.formId });
+      const first = dropOff.find((row) => row.questionId === form.nameId);
+
+      expect(first?.reached).toBe(1);
+    });
+
     it("never includes another user's forms in the overview", async () => {
       await seedForm();
       const stranger = await createUser(harness);

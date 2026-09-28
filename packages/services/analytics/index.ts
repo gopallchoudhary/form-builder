@@ -567,19 +567,27 @@ function median(sorted: number[]): number {
 }
 
 /** Bucket durations into readable spans, capped at six so the chart stays legible. */
-function histogram(durations: number[]): { label: string; min: number; max: number; count: number }[] {
-  const BUCKETS = [
+function histogram(durations: number[]): { label: string; min: number; max: number | null; count: number }[] {
+  /*
+   * The last bucket has no upper bound, and that is written as `null` rather than
+   * `Infinity`. zod v4's `z.number()` rejects a non-finite value, so an `Infinity` here
+   * failed the router's output validation and turned every time-to-complete query on a
+   * form that had any response at all into a 500 — while the empty case, which skips this
+   * function entirely, looked perfectly healthy.
+   */
+  const BUCKETS: Array<{ label: string; max: number | null }> = [
     { label: "under 30s", max: 30 },
     { label: "30s–1m", max: 60 },
     { label: "1–3m", max: 180 },
     { label: "3–5m", max: 300 },
     { label: "5–10m", max: 600 },
-    { label: "over 10m", max: Number.POSITIVE_INFINITY },
+    { label: "over 10m", max: null },
   ];
 
   const counts = BUCKETS.map(() => 0);
   for (const seconds of durations) {
-    const found = BUCKETS.findIndex((bucket) => seconds < bucket.max);
+    // A null `max` is the last bucket, so it catches whatever the earlier bounds missed.
+    const found = BUCKETS.findIndex((bucket) => bucket.max !== null && seconds < bucket.max);
     const index = found === -1 ? BUCKETS.length - 1 : found;
     counts[index] = (counts[index] ?? 0) + 1;
   }
@@ -587,7 +595,7 @@ function histogram(durations: number[]): { label: string; min: number; max: numb
   let lower = 0;
   return BUCKETS.map((bucket, index) => {
     const entry = { label: bucket.label, min: lower, max: bucket.max, count: counts[index] ?? 0 };
-    lower = bucket.max;
+    lower = bucket.max ?? lower;
     return entry;
   });
 }

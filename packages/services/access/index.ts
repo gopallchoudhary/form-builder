@@ -266,6 +266,44 @@ class AccessService {
         .where(eq(formSessionsTable.id, sessionId));
     });
 
+    /*
+     * View events are recorded here rather than through a client-called endpoint.
+     *
+     * `getQuestionDropOff` reads `QUESTION_VIEW` rows and nothing else had been writing
+     * them, so per-question drop-off could never have had data. A draft save already
+     * carries the respondent's position and the session already stores the old one, so
+     * this is the one place a genuine move is observable — and gating on an actual change
+     * means a respondent hammering "back" cannot inflate the funnel.
+     *
+     * The first `VIEW` is deliberately not here: it is emitted by `startSession`, before
+     * anything else, which is what time-to-complete is measured from.
+     */
+    const movedToPage = currentPageId !== undefined && currentPageId !== session.currentPageId;
+    const movedToQuestion =
+      currentQuestionId !== undefined && currentQuestionId !== session.currentQuestionId;
+
+    if (movedToPage && currentPageId) {
+      await this.recordEvent({
+        formId: session.formId,
+        sessionId,
+        type: "PAGE_VIEW",
+        pageId: currentPageId,
+        questionId: currentQuestionId ?? null,
+        formVersion: session.formVersion,
+      });
+    }
+
+    if (movedToQuestion && currentQuestionId) {
+      await this.recordEvent({
+        formId: session.formId,
+        sessionId,
+        type: "QUESTION_VIEW",
+        questionId: currentQuestionId,
+        pageId: currentPageId ?? session.currentPageId ?? null,
+        formVersion: session.formVersion,
+      });
+    }
+
     return { sessionId, savedAt: new Date().toISOString() };
   }
 

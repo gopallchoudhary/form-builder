@@ -654,6 +654,53 @@ describe.skipIf(!available)("the HTTP API", () => {
   // ── Analytics and export ─────────────────────────────────────────────────────
 
   describe("responses and analytics", () => {
+    it("reports time to complete for a form that has a response", async () => {
+      /*
+       * This exists because the empty case looked healthy while the populated one did not.
+       * The service returned `max: Infinity` for the open-ended top bucket, which zod v4's
+       * `z.number()` rejects, so the router's output validation turned every
+       * time-to-complete query on a form with a response into a 500 — while a service-level
+       * test passed, because output validation only happens in the tRPC layer.
+       */
+      const user = await signUp();
+      const form = await publishedForm(user.cookie);
+      const deviceId = "00000000-0000-4000-8000-00000000feed";
+
+      const question = await request(app as never)
+        .get(`/api/form/question/listQuestions?formId=${form.formId}`)
+        .set(auth(user.cookie));
+
+      const started = await request(app as never)
+        .post("/api/public/form/startSession")
+        .send({ slug: form.slug, deviceId });
+
+      await request(app as never)
+        .post("/api/public/form/submitForm")
+        .send({
+          sessionId: started.body.sessionId,
+          deviceId,
+          answers: [{ questionId: question.body[0].id, value: "Gopal" }],
+        });
+
+      const timing = await request(app as never)
+        .get(`/api/form/analytics/getTimeToComplete?formId=${form.formId}`)
+        .set(auth(user.cookie));
+
+      expect(timing.status).toBe(200);
+      expect(timing.body.count).toBe(1);
+      expect(timing.body.averageSeconds).not.toBeNull();
+
+      // Every bucket is a finite bound, or null for the open-ended top one.
+      const top = timing.body.histogram[timing.body.histogram.length - 1];
+      expect(top.max).toBeNull();
+      for (const bucket of timing.body.histogram) {
+        if (bucket.max !== null) expect(Number.isFinite(bucket.max)).toBe(true);
+      }
+      expect(
+        timing.body.histogram.reduce((sum: number, bucket: { count: number }) => sum + bucket.count, 0),
+      ).toBe(1);
+    });
+
     it("reports zero rather than dividing by zero for a new form", async () => {
       const user = await signUp();
       const form = await publishedForm(user.cookie);

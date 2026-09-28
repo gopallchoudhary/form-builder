@@ -16,6 +16,7 @@ import {
 } from "./model";
 
 import { publicProcedure, router, sensitivePublicProcedure } from "../../trpc";
+import { getFormUnlockCookie, setFormUnlockCookie } from "../../utils/cookie";
 
 const TAGS = ["Public"];
 const getPath = generatePath("/public/form");
@@ -38,7 +39,16 @@ export const publicRouter = router({
     })
     .input(getFormBySlugInputModel)
     .output(getFormBySlugOutputSchema)
-    .query(({ input }) => accessService.getPublicFormBySlug(input)),
+    .query(({ input, ctx }) => {
+      /*
+       * An explicitly passed token wins, so a caller can unlock a form in a context with no
+       * cookie jar — a server component on a different origin, say. The cookie is the
+       * fallback that makes a refresh keep working for a protected form.
+       */
+      const unlockToken = input.unlockToken ?? getFormUnlockCookie(ctx, input.slug);
+
+      return accessService.getPublicFormBySlug({ ...input, unlockToken });
+    }),
 
   /** Tight limit: this is the password-guessing surface. */
   unlockForm: sensitivePublicProcedure
@@ -53,7 +63,17 @@ export const publicRouter = router({
     })
     .input(unlockFormInputModel)
     .output(unlockFormOutputSchema)
-    .mutation(({ input }) => accessService.unlock(input)),
+    .mutation(async ({ input, ctx }) => {
+      const result = await accessService.unlock(input);
+
+      // Stored as a cookie as well as returned, so the next server render of this form
+      // sees the unlock rather than sending the respondent back to the password prompt.
+      if (result.unlocked && result.unlockToken) {
+        setFormUnlockCookie(ctx, input.slug, result.unlockToken);
+      }
+
+      return result;
+    }),
 
   startSession: publicProcedure
     .meta({

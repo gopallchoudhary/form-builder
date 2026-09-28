@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PublicFormClient } from "./public-form-client";
-import { PasswordGate } from "./password-gate";
+import { FormRuntime } from "~/components/form/form-runtime";
+import { FormStateScreen, type UnavailableReason } from "~/components/form/form-states";
+import { PublicFormShell } from "./public-form-shell";
 import { getCurrentFormBySlug } from "~/lib/public-form";
 
 /**
- * The public form, fetched on the server so the first paint is the real form.
+ * The public form.
  *
- * Rendered on the server, driven on the client: `PublicFormClient` owns the session and
- * the answers and hands them to the same `FormRenderer` the builder's preview uses.
+ * The definition is fetched on the server so the first paint is the real form rather than
+ * a spinner, and so a form that is closed or full is decided before any JavaScript runs.
+ * A password-protected form is the exception: its definition is withheld until the password
+ * is right, so the server can only render the gate.
  */
 export async function generateMetadata({
   params,
@@ -42,47 +45,14 @@ export default async function PublicFormPage({
   if (!result.ok) notFound();
 
   if (!result.form) {
-    return <UnavailableScreen reason={result.reason} />;
+    return <FormStateScreen reason={(result.reason ?? "NOT_FOUND") as UnavailableReason} />;
   }
 
-  // Locked: the API withholds the definition until the password is right, so all the
-  // server can do is say that a password is needed.
   if (result.locked) {
-    return <PasswordGate slug={slug} />;
+    // The theme is part of the definition, which is exactly what is being withheld, so the
+    // gate uses the default until the password is supplied.
+    return <PublicFormShell slug={slug} locked />;
   }
 
-  return <PublicFormClient form={result.form} />;
-}
-
-const SCREEN = "flex min-h-screen items-center justify-center bg-[#e8ebe6] px-4";
-
-const UNAVAILABLE: Record<string, { title: string; body: string }> = {
-  NOT_PUBLISHED: {
-    title: "This form is not open",
-    body: "The creator has not published it yet.",
-  },
-  EXPIRED: {
-    title: "This form has closed",
-    body: "It is no longer accepting responses.",
-  },
-  LIMIT_REACHED: {
-    title: "This form is full",
-    body: "It has collected as many responses as its creator allowed.",
-  },
-};
-
-function UnavailableScreen({ reason }: { reason: string | null }) {
-  const { title, body } = UNAVAILABLE[reason ?? ""] ?? {
-    title: "Form not found",
-    body: "The link may be wrong, or the form may have been deleted.",
-  };
-
-  return (
-    <main className={SCREEN}>
-      <div className="max-w-sm rounded-xl bg-white p-8 text-center">
-        <h1 className="text-xl font-bold tracking-tight text-[#0e0f0c]">{title}</h1>
-        <p className="mt-2 text-sm text-[#454745]">{body}</p>
-      </div>
-    </main>
-  );
+  return <FormRuntime form={result.form} />;
 }

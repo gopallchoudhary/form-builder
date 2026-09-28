@@ -501,21 +501,59 @@ sometimes focuses.
 
 ## Phase 6 — Respondent renderer
 
-- [ ] Password gate → `unlockForm` → signed form-scoped cookie
-- [ ] Session bootstrap: emit `VIEW`, resume an `IN_PROGRESS` session if the device cookie has
-      one, else `START`
-- [ ] `STEP` — one question, keyboard-first (`Enter` next, `Shift+Enter` back), auto-advance on
-      `YES_NO` / single choice, per-question validation before advancing, no page reload
-- [ ] `PAGED` — page title + grouped questions, `PAGE_VIEW` event, validate the page before Next
-- [ ] Autosave the draft on every step / page change so Resume works after a closed tab
-- [ ] `SUBMIT` → full server-side revalidation → thank-you
-- [ ] Dedicated designed states for: closed, past the deadline, limit reached, already submitted
-- [ ] **Time to complete** depends on the first `VIEW` firing before anything else
+- [x] Password gate → `unlockForm` → signed form-scoped cookie, so a refresh finds the form
+      already open instead of asking again
+- [x] Session bootstrap: `VIEW` then `START` server-side, resuming an `IN_PROGRESS` session
+      for this device instead of starting a new one
+- [x] `STEP` — one question, keyboard-first (`Enter` next, `Shift+Enter` back, and `Enter`
+      stays a newline inside a textarea), auto-advance on `YES_NO` / `SINGLE_CHOICE` /
+      `DROPDOWN`, per-question validation before advancing, no page reload
+- [x] `PAGED` — page title + grouped questions, `PAGE_VIEW` event, the page validated before Next
+- [x] Autosave the draft on every step / page change, and on `pagehide`, so Resume works after
+      a closed tab or a refresh
+- [x] `SUBMIT` → full server-side revalidation → thank-you in the creator's own words
+- [x] Designed states for: closed, past the deadline, limit reached, already submitted, not
+      found, and a server that could not answer — each in the form's own theme
+- [x] **Time to complete** depends on the first `VIEW` firing before anything else — it is
+      emitted inside `startSession`, before `START`
+
+### The rules live outside the component
+
+`components/form/runtime-logic.ts` holds what is visible, where the cursor lands on resume,
+which answers are valid and which questions advance by themselves. The component drives them
+and contains none of them, which is what makes them testable: 20 cases covering both
+layouts, resume, clamping a cursor past a deleted question, and per-kind validation.
+
+Client-side validation calls the *same* `validateAnswer` the service does, so the two cannot
+disagree about what a valid email is. It only decides *when* to complain.
+
+### Bugs this phase found
+
+- [x] **Nothing was ever writing `QUESTION_VIEW`.** `getQuestionDropOff` reads those rows and
+      has been shipping a chart of zeroes. View events are now recorded in `saveDraft` on a
+      genuine change of position — the one place a move is observable, and gating on a real
+      change means hammering "back" cannot inflate the funnel. No new endpoint, so no new
+      rate-limit surface for client telemetry.
+- [x] **`getTimeToComplete` 500'd on any form with a response.** The histogram's open-ended
+      top bucket had `max: Number.POSITIVE_INFINITY`, and zod v4's `z.number()` rejects a
+      non-finite value, so the router's output validation failed. The empty case skips the
+      histogram entirely and looked healthy, and a *service* test passed — output validation
+      only happens in the tRPC layer. The bound is now `null`, and there is an API-level test
+      that completes a response and asks for the timing.
 
 ### Gate
 
-- [ ] Both layouts complete end to end, with and without a password
-- [ ] Refresh mid-form keeps the answers
+- [x] Both layouts complete end to end, with and without a password — 35 assertions against
+      a running API (`apps/web/scripts/respondent-smoke.ts`), covering the stepper, the
+      paged form, the password gate and its cookie, cross-form unlock isolation, and each
+      designed state
+- [x] Refresh mid-form keeps the answers — verified as: start a session, answer, start again
+      from the same device, and get the same session, the same answers and the same position
+- [x] Pages render: `/f/[slug]` paints the real form, `/f/[slug]/thanks` shows the creator's
+      own copy, an unknown slug shows the not-found screen
+- [ ] Keyboard and auto-advance are covered by unit tests of the rules and by the markup
+      (real inputs, real buttons), not observed in a browser — worth a manual pass
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 292/292 · `pnpm build` 2/2
 
 ---
 

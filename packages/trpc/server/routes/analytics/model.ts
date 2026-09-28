@@ -74,7 +74,8 @@ export const getTimeToCompleteOutputSchema = z.object({
     z.object({
       label: z.string(),
       min: z.number(),
-      max: z.number(),
+      /** Null for the open-ended top bucket, not an infinity. */
+      max: z.number().nullable(),
       count: z.number().int(),
     }),
   ),

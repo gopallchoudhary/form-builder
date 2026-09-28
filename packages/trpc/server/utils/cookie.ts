@@ -1,5 +1,7 @@
 import type { CookieOptions, Request, Response } from "express";
 
+import { UNLOCK_TTL_MS } from "@repo/services/utils/signed-token";
+
 const ONE_MINUTE = 60 * 1000;
 const ONE_HOUR = 60 * ONE_MINUTE;
 const ONE_DAY = 24 * ONE_HOUR;
@@ -60,9 +62,11 @@ export function clearCookieFactory(res: Response, config: CookieConfig) {
 const AUTHENTICATION_COOKIE_NAME = "authentication-token";
 
 export function setAuthenticationCookie(
-  ctx: { createCookie: (name: string, value: string) => void },
+  ctx: {
+    createCookie: (name: string, value: string, opts?: CookieOptions) => void;
+  },
   accessToken: string,
-): void {
+) {
   ctx.createCookie(AUTHENTICATION_COOKIE_NAME, accessToken);
 }
 
@@ -73,7 +77,55 @@ export function getAuthenticationCookie(ctx: {
 }
 
 export function clearAuthenticationCookie(ctx: {
-  clearCookie: (name: string) => void;
-}): void {
+  clearCookie: (name: string, opts?: CookieOptions) => void;
+}) {
   ctx.clearCookie(AUTHENTICATION_COOKIE_NAME);
+}
+
+// ── Form unlock cookie ─────────────────────────────────────────────────────────
+
+/**
+ * A cookie per form, holding the unlock token for that form.
+ *
+ * Without it, a respondent who unlocked a protected form would lose access on every
+ * refresh: the token would live in client state, the server component would still see a
+ * locked form, and a reload would send them back to the password prompt with their answers
+ * still on the device.
+ *
+ * The token is HMAC-signed, scoped to one form id, and carries its own expiry — so the
+ * cookie cannot be forged, cannot unlock a different form, and stops working on its own.
+ * The cookie's own `maxAge` matches that expiry so a dead one does not linger.
+ *
+ * Named by slug, not by id, because the public route is addressed by slug and does not know
+ * the id until the form has been read.
+ */
+export const unlockCookieName = (slug: string) => `form-unlock-${slug}`;
+
+export function setFormUnlockCookie(
+  ctx: {
+    createCookie: (name: string, value: string, opts?: CookieOptions) => void;
+  },
+  slug: string,
+  token: string,
+) {
+  ctx.createCookie(unlockCookieName(slug), token, {
+    // Not httpOnly: the public form's own components pass the token on explicitly, and it
+    // grants nothing beyond what the signed token already permits.
+    httpOnly: false,
+    maxAge: UNLOCK_TTL_MS,
+  });
+}
+
+export function getFormUnlockCookie(
+  ctx: { getCookie: (name: string) => string | undefined },
+  slug: string,
+): string | undefined {
+  return ctx.getCookie(unlockCookieName(slug));
+}
+
+export function clearFormUnlockCookie(
+  ctx: { clearCookie: (name: string, opts?: CookieOptions) => void },
+  slug: string,
+) {
+  ctx.clearCookie(unlockCookieName(slug), { httpOnly: false });
 }
