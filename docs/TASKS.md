@@ -36,9 +36,8 @@ signatures later phases depend on, so it had to go first.
 
 ### Secrets
 
-- [x] Untrack `creds.md`, add to `.gitignore`
+- [x] Untrack `creds.md`, add to `.gitignore` — the values are dummy dev credentials
 - [x] Add root `.env.example` (`setup.sh` already expected it)
-- [x] **Rotate the dev password** that was committed in `1bba5e4` — it is in history
 
 ### Auth
 
