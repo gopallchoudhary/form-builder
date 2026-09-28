@@ -605,20 +605,48 @@ table's cells, so the two agree.
 
 Dashboard (all forms) and per form.
 
-- [ ] KPI row — responses, views, completion rate, average time
-- [ ] Trend — daily views / starts / submissions with a range picker
-- [ ] Funnel — views → starts → completes with drop-off percentages
-- [ ] Question drop-off — reached vs answered per question, highlighting the worst step
-- [ ] Answer distribution — bar / donut per choice, rating and yes-no question
-- [ ] Time to complete — histogram with average and median
-- [ ] Reuse the existing shadcn `chart.tsx` + Recharts 3.8; client components fed by the
+- [x] KPI row — responses, opened, completion rate, average time
+- [x] Trend — views / starts / submissions, with a range picker
+- [x] Funnel — views → starts → completes, with the drop-off between steps in people
+- [x] Question drop-off — reached vs answered per question, with the worst step called out
+- [x] Answer distribution — a donut for a two-way question, bars for choices and ratings
+- [x] Time to complete — histogram with the average, the median, and a median marker
+- [x] Reuses the existing shadcn `chart.tsx` + Recharts 3.8; client components fed by the
       `analytics` procedures
-- [ ] Chart palette mapped to `DESIGN.md` tokens (see Phase 9)
+- [x] Chart palette read from the `--chart-*` tokens, which Phase 5 mapped to the DESIGN.md
+      family; Phase 9 finishes the rest of the mapping
+- [x] The **granularity control is gone**. The service chooses the bucket from the range and
+      returns it, so a client-side knob could only ever disagree with the server; the UI shows
+      what it was sent instead
+
+### The funnel is drawn, not charted
+
+The thing worth seeing in a funnel is the *width* at each step and the size of the fall
+between them, and three narrowing bars say that more directly than a bar chart of three
+numbers. Each gap states how many people it cost — "24% completion rate" does not tell a
+creator which step to fix. The same reasoning decides the marks elsewhere: a two-way question
+gets a donut because yes and no are parts of a whole, while a five-option question gets bars
+because its options are not parts of anything, and a donut over a rating scale would imply
+five shares of one thing.
 
 ### Gate
 
-- [ ] Numbers in the UI match a direct SQL query
-- [ ] Every form only ever sees its owner's data
+- [x] **Numbers in the UI match a direct SQL query** — `apps/web/scripts/analytics-gate.ts`
+      seeds a real form, then recomputes every figure the UI shows with raw SQL against the
+      same database and compares: `VIEW` and `START` events, completed sessions, the
+      completion rate, all three funnel rates, the trend total, per-question answered counts,
+      every distribution bucket, the timing count and the overview totals. 31 assertions,
+      all green.
+- [x] **Every form only ever sees its owner's data** — all five analytics procedures refuse
+      a second creator with a 403, and neither creator's overview mentions the other's forms
+- [x] The gate caught itself lying once: seeding by submitting directly produced no
+      `QUESTION_VIEW` rows, so drop-off read zero reached for every question — correct for
+      that data, and a gate that would have passed on a flow nothing actually uses. The seed
+      now saves drafts the way the runtime does
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 294/294 · `pnpm build` 2/2
+- [ ] The charts are verified by their data and their compile, not by eye — worth a look in a
+      browser, where a wrong `layout` or an unreadable axis is obvious in a second and
+      invisible to every check above
 
 ---
 

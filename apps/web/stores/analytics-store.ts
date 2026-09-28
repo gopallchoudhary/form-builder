@@ -8,9 +8,12 @@ import { persist } from "zustand/middleware";
  * dashboard should not silently reset someone who is comparing the last 30 days.
  */
 
+/**
+ * The bucket size is chosen by the service from the range and returned with the series —
+ * 90 days of hourly buckets is unreadable and 7 days of monthly buckets is one bar. A client
+ * control could only ever disagree with the server, so the UI shows what it was sent.
+ */
 export type Granularity = "day" | "week" | "month";
-
-export const GRANULARITIES: Granularity[] = ["day", "week", "month"];
 
 export interface DateRange {
   from: string | null;
@@ -29,11 +32,9 @@ export interface AnalyticsState {
   range: DateRange;
   /** `custom` once a range has been set by hand, so no preset button stays lit. */
   preset: RangePreset | "custom";
-  granularity: Granularity;
 
   setPreset: (preset: RangePreset) => void;
   setRange: (range: DateRange) => void;
-  setGranularity: (granularity: Granularity) => void;
   /** The `{ from, to }` pair the analytics hooks take, omitting an unbounded end. */
   toQuery: () => { from?: string; to?: string };
 }
@@ -68,13 +69,10 @@ export const useAnalyticsStore = create<AnalyticsState>()(
     (set, get) => ({
       range: rangeFromPreset("30d"),
       preset: "30d",
-      granularity: "day",
 
       setPreset: (preset) => set({ preset, range: rangeFromPreset(preset) }),
 
       setRange: (range) => set({ range, preset: "custom" }),
-
-      setGranularity: (granularity) => set({ granularity }),
 
       toQuery: () => {
         const { from, to } = get().range;

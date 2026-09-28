@@ -1,34 +1,40 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
 
 import { BuilderChrome } from "~/components/builder/builder-chrome";
+import { AnswerDistributions } from "~/components/analytics/answer-distribution";
+import { Funnel } from "~/components/analytics/funnel";
+import { KpiRow } from "~/components/analytics/kpi-row";
+import { QuestionDropOff } from "~/components/analytics/question-dropoff";
+import { TimeToComplete } from "~/components/analytics/time-to-complete";
+import { TrendChart } from "~/components/analytics/trend-chart";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { useGetFormAnalytics, useGetFunnel } from "~/hooks/api/analytics";
 import {
-  GRANULARITIES,
+  useGetFormAnalytics,
+  useGetFunnel,
+  useGetQuestionDropOff,
+  useGetTimeToComplete,
+} from "~/hooks/api/analytics";
+import {
   RANGE_PRESETS,
   useAnalyticsStore,
   type RangePreset,
 } from "~/stores/analytics-store";
 
-const percent = (rate: number) => `${Math.round(rate * 100)}%`;
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-card p-4 ring-1 ring-border">
-      <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight">{value}</p>
-    </div>
-  );
-}
-
+/**
+ * Analytics for one form.
+ *
+ * The five procedures are fetched together rather than as a waterfall, because a creator
+ * opening this page wants all of it at once and the data is small. The range lives in the
+ * store, so switching between this page and the overview keeps the same window.
+ */
 function AnalyticsBody() {
   const { formId } = useParams<{ formId: string }>();
+  const [rangeKey, setRangeKey] = useState<RangePreset>("30d");
 
   const { preset, setPreset, toQuery } = useAnalyticsStore(
     useShallow((state) => ({
@@ -38,8 +44,16 @@ function AnalyticsBody() {
     })),
   );
 
-  const { data, isLoading } = useGetFormAnalytics(formId, toQuery());
-  const { data: funnel } = useGetFunnel(formId, toQuery());
+  const range = toQuery();
+
+  const headline = useGetFormAnalytics(formId, range);
+  const funnel = useGetFunnel(formId, range);
+  const dropOff = useGetQuestionDropOff(formId, range);
+  const timing = useGetTimeToComplete(formId, range);
+
+  // `rangeKey` is the local echo of the click, so the buttons respond immediately; the
+  // store is what survives navigating away and back.
+  const activePreset = rangeKey || preset;
 
   return (
     <div className="flex flex-col gap-6 p-4 sm:p-6">
@@ -48,80 +62,55 @@ function AnalyticsBody() {
           <Button
             key={option}
             size="sm"
-            variant={preset === option ? "default" : "outline"}
-            aria-pressed={preset === option}
-            onClick={() => setPreset(option)}
+            variant={activePreset === option ? "default" : "outline"}
+            aria-pressed={activePreset === option}
+            onClick={() => {
+              setRangeKey(option);
+              setPreset(option);
+            }}
           >
             {RANGE_PRESETS[option]} days
           </Button>
         ))}
       </div>
 
-      {isLoading && <Skeleton className="h-28 w-full" />}
+      {headline.isLoading ? (
+        <Skeleton className="h-24 w-full" />
+      ) : headline.data ? (
+        <KpiRow
+          kpis={{
+            responses: headline.data.totals.completions,
+            views: headline.data.totals.views,
+            completionRate: headline.data.totals.completionRate,
+            averageSeconds: timing.data?.averageSeconds ?? null,
+          }}
+          caption={
+            timing.data && timing.data.count > 0
+              ? `From ${timing.data.count} completed response${timing.data.count === 1 ? "" : "s"}, bucketed by ${headline.data.granularity}.`
+              : undefined
+          }
+        />
+      ) : null}
 
-      {data && (
-        <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Views" value={String(data.totals.views)} />
-            <Stat label="Starts" value={String(data.totals.starts)} />
-            <Stat label="Completions" value={String(data.totals.completions)} />
-            <Stat label="Completion rate" value={percent(data.totals.completionRate)} />
-          </div>
-
-          <section className="rounded-xl bg-card p-5 ring-1 ring-border">
-            <h2 className="text-sm font-medium">Trend</h2>
-            {data.series.length === 0 ? (
-              <p className="text-muted-foreground mt-3 text-sm">
-                No activity in this range.
-              </p>
-            ) : (
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {data.series.map((point) => (
-                  <li
-                    key={point.at}
-                    className="text-muted-foreground flex items-center justify-between text-sm"
-                  >
-                    <span className="font-mono text-xs">
-                      {new Date(point.at).toLocaleDateString()}
-                    </span>
-                    <span>
-                      {point.views} views · {point.submissions} completed
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </>
+      {headline.data && (
+        <TrendChart series={headline.data.series} granularity={headline.data.granularity} />
       )}
 
-      {funnel && (
-        <section className="rounded-xl bg-card p-5 ring-1 ring-border">
-          <h2 className="text-sm font-medium">Funnel</h2>
-          <div className="mt-3 grid grid-cols-3 gap-3 text-sm">
-            <div>
-              <p className="text-muted-foreground text-xs">View → start</p>
-              <p className="font-semibold">{percent(funnel.viewToStartRate)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Start → complete</p>
-              <p className="font-semibold">{percent(funnel.startToCompleteRate)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs">Overall</p>
-              <p className="font-semibold">{percent(funnel.overallRate)}</p>
-            </div>
-          </div>
-        </section>
-      )}
+      {funnel.data && <Funnel data={funnel.data} />}
 
-      {/*
-        The trend chart and the answer breakdowns are the analytics phase. What is here is
-        the real numbers, from the real range, rather than template placeholders.
-      */}
-      <p className="text-muted-foreground text-xs">
-        Bucketing: {GRANULARITIES.join(", ")} — chosen per view in the analytics phase.
-      </p>
+      {dropOff.isLoading ? (
+        <Skeleton className="h-64 w-full" />
+      ) : dropOff.data ? (
+        <QuestionDropOff rows={dropOff.data} />
+      ) : null}
+
+      <AnswerDistributions />
+
+      {timing.isLoading ? (
+        <Skeleton className="h-48 w-full" />
+      ) : timing.data ? (
+        <TimeToComplete timing={timing.data} />
+      ) : null}
     </div>
   );
 }
