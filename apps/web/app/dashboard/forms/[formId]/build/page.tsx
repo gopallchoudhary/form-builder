@@ -588,7 +588,7 @@ function EditFieldPanel({
 // ── Form Builder Page ──────────────────────────────────────────────────────────
 
 const FormBuilderPage = () => {
-  const { id: formId } = useParams<{ id: string }>();
+  const { formId } = useParams<{ formId: string }>();
   const router = useRouter();
 
   // Local field list

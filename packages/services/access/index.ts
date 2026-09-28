@@ -500,6 +500,9 @@ class AccessService {
       })),
       questions: questions.map((question) => ({
         id: question.id,
+        // Carried so the renderer can group a `PAGED` form. Without it the public shape
+        // is a flat, ordered list and the respondent sees every question on one page.
+        pageId: question.pageId,
         kind: question.kind,
         label: question.label,
         labelKey: question.labelKey,
@@ -515,6 +518,7 @@ class AccessService {
     return this.db
       .select({
         id: questionsTable.id,
+        pageId: questionsTable.pageId,
         kind: questionsTable.kind,
         label: questionsTable.label,
         labelKey: questionsTable.labelKey,

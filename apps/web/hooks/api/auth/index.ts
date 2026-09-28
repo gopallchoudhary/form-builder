@@ -54,10 +54,26 @@ export const useSignIn = () => {
   };
 };
 
+export type UserStatus = "loading" | "authenticated" | "anonymous";
+
 //, get user info hook 
 
+/**
+ * The signed-in user, with the three states a caller actually has to handle.
+ *
+ * `isFetched` alone was not enough: it is false both before the query runs and when it
+ * fails, so "loading" and "signed out" looked identical and every protected page sent
+ * the visitor to `/login` on first paint. `status` makes the difference explicit.
+ */
 export const useUser = () => {
-  const {data: user, isFetched,  } = trpc.auth.getLoggedInUserInfo.useQuery()
+  const { data: user, isFetched, isLoading, isError, refetch } =
+    trpc.auth.getLoggedInUserInfo.useQuery(undefined, { retry: false });
 
-  return {user, isFetched}
+  const status: UserStatus = isLoading || (!isFetched && !isError)
+    ? "loading"
+    : user
+      ? "authenticated"
+      : "anonymous";
+
+  return { user, status, isLoading, isError, refetch };
 }

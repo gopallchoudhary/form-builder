@@ -153,6 +153,57 @@ describe.skipIf(!servicesAvailable)("services against a real database", () => {
       ).rejects.toBeInstanceOf(AppError);
     });
 
+    it("publishes a stepper form with no pages", async () => {
+      // The default layout. A stepper form needs no pages, so this is the shape a brand
+      // new form has and it must be publishable straight away.
+      const { id: formId } = await harness.forms.createForm(owner.id, { title: "Stepper" });
+      await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "SHORT_TEXT",
+        label: "Name",
+      });
+
+      const published = await harness.forms.setStatus(owner.id, {
+        formId,
+        status: "PUBLISHED",
+      });
+      expect(published.status).toBe("PUBLISHED");
+    });
+
+    it("refuses to publish a paged form with no pages", async () => {
+      // A paged form whose questions belong to no page renders as an empty form, so the
+      // gate has to catch it here rather than the respondent.
+      const { id: formId } = await harness.forms.createForm(owner.id, { title: "Paged" });
+      await harness.forms.updateSettings(owner.id, { formId, layoutMode: "PAGED" });
+      await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "SHORT_TEXT",
+        label: "Name",
+      });
+
+      await expect(
+        harness.forms.setStatus(owner.id, { formId, status: "PUBLISHED" }),
+      ).rejects.toBeInstanceOf(AppError);
+    });
+
+    it("publishes a paged form once it has a page", async () => {
+      const { id: formId } = await harness.forms.createForm(owner.id, { title: "Paged" });
+      await harness.forms.updateSettings(owner.id, { formId, layoutMode: "PAGED" });
+      const page = await harness.pages.createPage(owner.id, { formId, title: "One" });
+      await harness.questions.createQuestion(owner.id, {
+        formId,
+        pageId: page.id,
+        kind: "SHORT_TEXT",
+        label: "Name",
+      });
+
+      const published = await harness.forms.setStatus(owner.id, {
+        formId,
+        status: "PUBLISHED",
+      });
+      expect(published.status).toBe("PUBLISHED");
+    });
+
     it("bumps the version on publish and again on re-publish", async () => {
       const { id: formId } = await harness.forms.createForm(owner.id, { title: "Versioned" });
       await harness.questions.createQuestion(owner.id, {

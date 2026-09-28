@@ -82,6 +82,8 @@ export type GetSessionInputType = z.input<typeof getSessionInput>;
 
 export const publicQuestionSchema = z.object({
   id: z.string(),
+  /** Which page this question belongs to, or null in `STEP` layout. */
+  pageId: z.string().nullable(),
   kind: questionKindSchema,
   label: z.string(),
   labelKey: z.string(),

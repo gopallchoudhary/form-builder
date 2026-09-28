@@ -62,12 +62,14 @@ describe("schema", () => {
       ).rejects.toThrow();
     });
 
-    it("defaults a new form to a PAGED draft on the sage theme", async () => {
+    it("defaults a new form to a STEP draft on the sage theme", async () => {
       const formId = await createForm();
       const rows = await query<Record<string, unknown>>(`SELECT * FROM forms WHERE id = $1`, [formId]);
 
       expect(rows[0]).toMatchObject({
-        layout_mode: "PAGED",
+        // STEP, not PAGED: a stepper form needs no pages, so a new form is coherent
+        // immediately. PAGED left every new form with questions on no page.
+        layout_mode: "STEP",
         status: "DRAFT",
         theme_key: "sage",
         version: 1,

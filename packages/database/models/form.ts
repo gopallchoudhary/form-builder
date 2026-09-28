@@ -41,7 +41,10 @@ export const formsTable = pgTable(
     title: varchar("title", { length: 120 }).notNull(),
     description: text("description"),
 
-    layoutMode: layoutModeEnum("layout_mode").notNull().default("PAGED"),
+    // `STEP` rather than `PAGED`, because a stepper form needs no pages: a new form is
+    // coherent the moment it is created. `PAGED` would leave every new form with
+    // questions that belong to no page, which renders as an empty form.
+    layoutMode: layoutModeEnum("layout_mode").notNull().default("STEP"),
     themeKey: varchar("theme_key", { length: 32 }).notNull().default("sage"),
     status: formStatusEnum("status").notNull().default("DRAFT"),
 

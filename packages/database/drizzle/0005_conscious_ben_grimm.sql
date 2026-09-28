@@ -1,0 +1,1 @@
+ALTER TABLE "forms" ALTER COLUMN "layout_mode" SET DEFAULT 'STEP';

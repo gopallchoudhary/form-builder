@@ -336,56 +336,98 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 
 ### Routes
 
-- [ ] `/` → redirect by session
-- [ ] `/dashboard` — overview analytics
-- [ ] `/dashboard/forms` — list + create
-- [ ] `/dashboard/forms/[formId]/build` — builder
-- [ ] `/dashboard/forms/[formId]/settings`
-- [ ] `/dashboard/forms/[formId]/share`
-- [ ] `/dashboard/forms/[formId]/responses`
-- [ ] `/dashboard/forms/[formId]/analytics`
-- [ ] `/f/[slug]` — public form
-- [ ] `/f/[slug]/thanks`
+- [x] `/` → redirect by session
+- [x] `/dashboard` — overview analytics, on the real `getOverview` query (the POC rendered
+      a hard-coded `data.json` chart)
+- [x] `/dashboard/forms` — list + create
+- [x] `/dashboard/forms/[formId]/build` — builder
+- [x] `/dashboard/forms/[formId]/settings`
+- [x] `/dashboard/forms/[formId]/share`
+- [x] `/dashboard/forms/[formId]/responses`
+- [x] `/dashboard/forms/[formId]/analytics`
+- [x] `/f/[slug]` — public form, definition fetched on the server
+- [x] `/f/[slug]/thanks`
+- [x] `components/form-tabs.tsx` — the five form sections, mounted by each of those pages so
+      a new tab is one entry plus one page
 
 ### Auth gating
 
-- [ ] `trpc/server-caller.ts` — server-side caller that **forwards cookies** from `next/headers`
-      (the current `create-client` sets `credentials: "include"`, which Node ignores)
-- [ ] Guard the dashboard in a server component and redirect to `/login`
-- [ ] **Fix the `/dashboard` infinite redirect** (`app/dashboard/page.tsx` replaces
-      `/dashboard` with `/dashboard`)
-- [ ] `useUser` should distinguish "not signed in" from "still loading", otherwise every
-      protected page bounces to `/login` on first paint
+- [x] `trpc/server-caller.ts` — server-side caller that **forwards cookies** from `next/headers`
+      (the browser client sets `credentials: "include"`, which Node ignores, so every
+      server-side "who is this?" was a 401)
+- [x] `lib/auth.ts` — `getCurrentUser` / `requireUser`. Only `UNAUTHORIZED` becomes
+      `null`; a 500 is rethrown, or a broken API would look like a working sign-out
+- [x] Guard the dashboard in a server component — `dashboard/layout.tsx`, so a new page
+      cannot ship unguarded
+- [x] **Fix the `/dashboard` infinite redirect** — `/` and the dashboard are both server
+      components now, so no effect ever decides where to go
+- [x] `useUser` distinguishes `loading` / `authenticated` / `anonymous`; `isFetched` alone
+      made "loading" and "signed out" identical
+- [x] `API_URL` server env var, falling back to `NEXT_PUBLIC_API_URL`, so a deployment can
+      point the server at an internal address
 
 ### Zustand stores
 
-- [ ] `stores/builder-store.ts` — form definition, `selectedQuestionId`, `activeTab`,
-      `saving` state, undo/redo history
-- [ ] `stores/builder-store` — debounced autosave middleware serialising the definition into the
-      granular tRPC mutations
-- [ ] `stores/runner-store.ts` — respondent runtime: `sessionId`, layout-aware cursor, answers
-      draft, `touched`/`errors`, progress, submit state
-- [ ] `stores/runner-store` — `persist` to `localStorage` so a refresh mid-form loses nothing,
-      reconciled with the server draft on resume
-- [ ] `stores/analytics-store.ts` — date range + granularity
-- [ ] Use `useShallow` for selectors to avoid re-render storms
+- [x] `stores/builder-store/` — definition, `selectedQuestionId`, `activeTab`, `saveState`,
+      50-step undo/redo, all mutations funnelled through one `commit`
+- [x] `plan-sync.ts` — the diff from the last persisted definition to the current one,
+      expressed as tRPC calls. Pure, and the part most worth testing
+- [x] `run-sync.ts` — runs a plan and swaps `local:` ids for the server's, rewriting a
+      reorder that names a question created moments earlier
+- [x] `use-autosave.ts` — 800ms debounce, flushed on `pagehide`, using the **uncached** `api`
+      client: the store is the source of truth, so a cache refetch would overwrite unsaved
+      edits
+- [x] `stores/runner-store.ts` — session, layout-aware cursor, answers, `touched`/`errors`,
+      submit state; `persist` to `localStorage`, keeping only answers/cursor/touched
+- [x] `stores/analytics-store.ts` — range, preset and granularity, persisted
+- [x] `useShallow` for multi-field selectors
 
 ### Hooks
 
-- [ ] `hooks/api/{form,form-page,question,public,response,analytics}/` mirroring the routers
-- [ ] Fix the invalidation bugs in `hooks/api/form`: `createField` and `deleteField`
-      invalidate `getField` with no input, and delete does not clear `getField`
+- [x] `hooks/api/{form,form-page,question,public,response,analytics}/` mirroring the routers
+- [x] Invalidation targets are chosen per procedure: `createPage`/`reorderPages` name the
+      exact entry, while `updatePage`/`deletePage`/`updateQuestion`/`deleteQuestion` take no
+      `formId` and so invalidate the whole key. The old hooks invalidated `getField` with no
+      input at all, which matched nothing and left a deleted question on screen
+- [x] `trpc/api.ts` — a plain, uncached proxy client. `trpc/server.ts` was renamed: it was
+      never server-only, and the name invited exactly the wrong import in a client component
 
 ### Renderer
 
-- [ ] Extract the respondent form into one component tree taking a `FormDefinition`
-- [ ] Mount it from `/f/[slug]` with server data **and** from a live Preview tab with draft
-      store data — WYSIWYG by construction
+- [x] `components/form/form-renderer.tsx` — one component tree, driven only by props
+- [x] `components/form/question-input.tsx` — all 13 kinds on native elements, so keyboard
+      and screen-reader behaviour is the platform's rather than re-derived
+- [x] `RenderableDefinition` is the *smaller* structural type, not `FormDefinition`: the
+      public API withholds `position` and `labelKey`, and a `FormDefinition` parameter would
+      have forced the public route to invent fields the server does not send
+- [x] Mounted from `/f/[slug]` with server data and from `components/form/form-preview.tsx`
+      with store data — WYSIWYG by construction
+- [x] The form paints from the server definition; the session starts in parallel and only
+      gates submitting
+
+### Bugs this phase found
+
+- [x] **`publicQuestionSchema` had no `pageId`**, though the service selected it, so a
+      `PAGED` form reached the public route as a flat list and every respondent saw all its
+      questions on one page — or, with no matching page, none at all. zod strips what the
+      output schema does not declare, so the field was silently dropped.
+- [x] **The publish gate let a `PAGED` form with no pages through.** Its questions belong
+      to no page, so the audience got a published form that renders nothing. The gate now
+      requires a page when the layout is `PAGED`.
+- [x] **`layout_mode` defaulted to `PAGED`**, so every new form was born in exactly that
+      broken state. Now `STEP`, which needs no pages and is coherent the moment it is
+      created — migration `0005_conscious_ben_grimm.sql`.
 
 ### Gate
 
-- [ ] Signed-out visitors are redirected server-side, not by a client flash
-- [ ] `pnpm lint` / `check-types` / `test` green
+- [x] Signed-out visitors are redirected server-side, not by a client flash — verified live:
+      all eight dashboard routes and `/` return `307 → /login`, and with a session cookie
+      `/` returns `307 → /dashboard` and the dashboard renders
+- [x] `/f/[slug]` verified live in both layouts: `PAGED` shows page 1 with its two
+      questions and hides page 2; `STEP` shows the first question only
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 262/262 · `pnpm build` 2/2
+- [ ] The builder UI is still the Phase 1 POC; the store it will use is built and tested,
+      and Phase 5 rewires it
 
 ---
 

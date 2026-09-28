@@ -216,7 +216,7 @@ function FormCard({
       </CardContent>
 
       <CardFooter className="pt-4 pb-5 border-t mt-4">
-        <Link href={`/dashboard/forms/${id}`} id={`open-form-${id}`} className="ml-auto">
+        <Link href={`/dashboard/forms/${id}/build`} id={`open-form-${id}`} className="ml-auto">
           <Button
             size="sm"
             variant="outline"

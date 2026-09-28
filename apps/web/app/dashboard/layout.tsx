@@ -1,15 +1,25 @@
-import { AppSidebar } from "~/components/app-sidebar"
-import { SiteHeader } from "~/components/site-header"
+import { AppSidebar } from "~/components/app-sidebar";
+import { SiteHeader } from "~/components/site-header";
 import {
   SidebarInset,
   SidebarProvider,
-} from "~/components/ui/sidebar"
+} from "~/components/ui/sidebar";
+import { requireUser } from "~/lib/auth";
 
-export default function DashboardLayout({
+/**
+ * The one guard for the whole dashboard.
+ *
+ * It lives here rather than in each page because the layout wraps every dashboard route,
+ * so a new page cannot ship unguarded. `requireUser` redirects server-side, so a
+ * signed-out visitor never sees protected content flash before the client navigates away.
+ */
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await requireUser();
+
   return (
     <SidebarProvider
       style={

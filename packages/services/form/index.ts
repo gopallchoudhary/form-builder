@@ -329,6 +329,22 @@ class FormService {
         throw new ConflictError("Add at least one question before publishing");
       }
 
+      // A paged form with no pages publishes as a form that renders nothing: the
+      // questions exist but none of them belong to a page, so the respondent's view is
+      // empty. `layoutMode` defaults to `PAGED`, so this is the state a brand new form is
+      // in, and the check has to live at the gate rather than in the renderer.
+      if (form.layoutMode === "PAGED") {
+        const pages = await this.db
+          .select({ id: formPagesTable.id })
+          .from(formPagesTable)
+          .where(eq(formPagesTable.formId, formId))
+          .limit(1);
+
+        if (pages.length === 0) {
+          throw new ConflictError("Add at least one page before publishing");
+        }
+      }
+
       for (const question of questions) {
         try {
           parseSettingsFor(question.kind as QuestionKind, question.settings);

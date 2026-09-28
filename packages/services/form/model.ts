@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { questionKindSchema } from "../question/model";
+
 import { formThemeKeySchema } from "../utils/theme";
 
 export const createFormInput = z.object({
@@ -108,7 +110,9 @@ export const questionDefinitionSchema = z.object({
   id: z.string(),
   pageId: z.string().nullable(),
   position: z.string(),
-  kind: z.string(),
+  // The one of the thirteen, not an arbitrary string: the renderer switches on it and
+  // the builder's kind picker can only produce a member of the enum.
+  kind: questionKindSchema,
   label: z.string(),
   labelKey: z.string(),
   description: z.string().nullable(),

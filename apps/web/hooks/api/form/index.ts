@@ -30,6 +30,45 @@ export const useGetForm = (formId: string | null) => {
   return { form, isLoading, isFetching, isError, error, refetch };
 };
 
+//, settings only — what the settings and share pages read
+export const useGetFormSettings = (formId: string | null) => {
+  const { data: form, isLoading, isFetching, isError, error, refetch } =
+    trpc.form.getFormSettings.useQuery({ formId: formId ?? "" }, { enabled: !!formId });
+
+  return { form, isLoading, isFetching, isError, error, refetch };
+};
+
+//, set or clear the password an audience needs to open the form
+export const useSetFormPassword = () => {
+  const utils = trpc.useUtils();
+
+  const { mutateAsync: setFormPasswordAsync, status, isError, error } =
+    trpc.form.setFormPassword.useMutation({
+      onSuccess: async (_data, variables) => {
+        await utils.form.getFormSettings.invalidate({ formId: variables.formId });
+        await utils.form.getForm.invalidate({ formId: variables.formId });
+      },
+    });
+
+  return { setFormPasswordAsync, status, isError, error };
+};
+
+//, change the share slug
+export const useUpdateFormSlug = () => {
+  const utils = trpc.useUtils();
+
+  const { mutateAsync: updateFormSlugAsync, status, isError, error } =
+    trpc.form.updateFormSlug.useMutation({
+      onSuccess: async (_data, variables) => {
+        await utils.form.getFormSettings.invalidate({ formId: variables.formId });
+        await utils.form.getForm.invalidate({ formId: variables.formId });
+        await utils.form.listForms.invalidate();
+      },
+    });
+
+  return { updateFormSlugAsync, status, isError, error };
+};
+
 //, update form settings
 export const useUpdateFormSettings = () => {
   const utils = trpc.useUtils();
@@ -38,6 +77,7 @@ export const useUpdateFormSettings = () => {
     trpc.form.updateFormSettings.useMutation({
       onSuccess: async (data) => {
         await utils.form.getForm.invalidate({ formId: data.id });
+        await utils.form.getFormSettings.invalidate({ formId: data.id });
         await utils.form.listForms.invalidate();
       },
     });
@@ -53,6 +93,7 @@ export const useSetFormStatus = () => {
     trpc.form.setFormStatus.useMutation({
       onSuccess: async (data) => {
         await utils.form.getForm.invalidate({ formId: data.id });
+        await utils.form.getFormSettings.invalidate({ formId: data.id });
         await utils.form.listForms.invalidate();
       },
     });
