@@ -1,14 +1,14 @@
 import { db, eq } from "@repo/database";
 import { formsTable } from "@repo/database/models/form";
-import { formFieldsTable } from "@repo/database/models/form-field";
+import { questionsTable } from "@repo/database/models/question";
 
 import { ForbiddenError, NotFoundError } from "./errors";
 
 /**
  * Ownership is enforced here, inside the service layer, rather than in tRPC
- * middleware. Every mutating/reading method below takes a `userId` as a
- * *required* argument, so forgetting to pass it is a compile error — a runtime
- * middleware can be bypassed by simply not using it.
+ * middleware. Every method that touches a form takes a `userId` as a *required*
+ * argument, so forgetting to pass it is a compile error — a runtime middleware can
+ * be bypassed by simply not using it.
  */
 
 /** Throws unless `userId` created `formId`. Returns the row so callers can reuse it. */
@@ -28,20 +28,26 @@ export async function assertFormOwnership(formId: string, userId: string) {
   return form;
 }
 
-/** Throws unless `userId` created the form that owns `fieldId`. */
-export async function assertFieldOwnership(fieldId: string, userId: string) {
+/**
+ * Throws unless `userId` created the form that owns `questionId`.
+ *
+ * Questions that are soft-deleted are deliberately not excluded here: a caller
+ * must be able to distinguish "does not exist" from "not yours", and ownership of a
+ * deleted question still matters to whoever owned it.
+ */
+export async function assertFieldOwnership(questionId: string, userId: string) {
   const rows = await db
-    .select({ id: formFieldsTable.id, createdBy: formsTable.createdBy })
-    .from(formFieldsTable)
-    .innerJoin(formsTable, eq(formFieldsTable.formId, formsTable.id))
-    .where(eq(formFieldsTable.id, fieldId))
+    .select({ id: questionsTable.id, createdBy: formsTable.createdBy })
+    .from(questionsTable)
+    .innerJoin(formsTable, eq(questionsTable.formId, formsTable.id))
+    .where(eq(questionsTable.id, questionId))
     .limit(1);
 
-  const field = rows[0];
-  if (!field) throw new NotFoundError("Field does not exist");
-  if (field.createdBy !== userId) {
-    throw new ForbiddenError("You do not have access to this field");
+  const question = rows[0];
+  if (!question) throw new NotFoundError("Question does not exist");
+  if (question.createdBy !== userId) {
+    throw new ForbiddenError("You do not have access to this question");
   }
 
-  return field;
+  return question;
 }

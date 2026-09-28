@@ -1,199 +1,94 @@
 import { trpc } from "~/trpc/client";
 
-//, create form hook
-export const useCreateForm = () => {
-  const utils = trpc.useUtils()
-  const {
-    mutateAsync: createFormAsync,
-    mutate: createForm,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  } = trpc.form.createForm.useMutation({
-    onSuccess: async () => {
-      await utils.form.listForms.invalidate()
-    }
-  });
+/**
+ * Form and question hooks.
+ *
+ * Every mutation that changes a question invalidates both the single-question cache
+ * and the whole-form list, because the builder mirrors server state in a local
+ * store and a stale cache silently undoes the optimistic update.
+ */
 
-  return {
-    createFormAsync,
-    createForm,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  };
+//, create form
+export const useCreateForm = () => {
+  const utils = trpc.useUtils();
+
+  const { mutateAsync: createFormAsync, status, isError, error } =
+    trpc.form.createForm.useMutation({
+      onSuccess: async () => {
+        await utils.form.listForms.invalidate();
+      },
+    });
+
+  return { createFormAsync, status, isError, error };
 };
 
-//, list forms hook
+//, list forms
 export const useListForms = () => {
-  const {
-    data: forms,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  } = trpc.form.listForms.useQuery()
+  const { data: forms, isLoading, isFetching, isError, error, refetch } =
+    trpc.form.listForms.useQuery();
 
-  return {
-    forms,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  }
-}
+  return { forms, isLoading, isFetching, isError, error, refetch };
+};
 
-//, create field hook
-export const useCreateField = () => {
-  const utils = trpc.useUtils()
-  const {
-    mutateAsync: createFieldAsync,
-    mutate: createField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  } = trpc.form.createField.useMutation({
-    onSuccess: async () => {
-      await utils.form.getField.invalidate()
-      await utils.form.listFields.invalidate()
-    }
-  })
+//, create question
+export const useCreateQuestion = () => {
+  const utils = trpc.useUtils();
 
-  return {
-    createFieldAsync,
-    createField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  }
-}
+  const { mutateAsync: createQuestionAsync, status, isError, error } =
+    trpc.form.createQuestion.useMutation({
+      onSuccess: async (data, variables) => {
+        await utils.form.getQuestion.invalidate({ questionId: data.id });
+        await utils.form.listQuestions.invalidate({ formId: variables.formId });
+      },
+    });
 
-//, update field hook
-export const useUpdateField = () => {
-  const utils = trpc.useUtils()
-  const {
-    mutateAsync: updateFieldAsync,
-    mutate: updateField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  } = trpc.form.updateField.useMutation({
-    onSuccess: async (data) => {
-      await utils.form.getField.invalidate({ fieldId: data.id })
-      await utils.form.listFields.invalidate()
-    }
-  })
+  return { createQuestionAsync, status, isError, error };
+};
 
-  return {
-    updateFieldAsync,
-    updateField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  }
-}
+//, update question
+export const useUpdateQuestion = () => {
+  const utils = trpc.useUtils();
 
-//, delete field hook
-export const useDeleteField = () => {
-  const utils = trpc.useUtils()
-  const {
-    mutateAsync: deleteFieldAsync,
-    mutate: deleteField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  } = trpc.form.deleteField.useMutation({
-    onSuccess: async () => {
-      await utils.form.getField.invalidate()
-      await utils.form.listFields.invalidate()
-    }
-  })
+  const { mutateAsync: updateQuestionAsync, status, isError, error } =
+    trpc.form.updateQuestion.useMutation({
+      onSuccess: async (data) => {
+        await utils.form.getQuestion.invalidate({ questionId: data.id });
+        // No formId is available here, so every form's list is invalidated.
+        await utils.form.listQuestions.invalidate();
+      },
+    });
 
-  return {
-    deleteFieldAsync,
-    deleteField,
-    isError,
-    error,
-    isIdle,
-    failureCount,
-    isSuccess,
-    status,
-  }
-}
+  return { updateQuestionAsync, status, isError, error };
+};
 
-//, get field hook
-export const useGetField = (fieldId: string) => {
-  const {
-    data: field,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  } = trpc.form.getField.useQuery(
-    { fieldId },
-    { enabled: !!fieldId }
-  )
+//, delete question
+export const useDeleteQuestion = () => {
+  const utils = trpc.useUtils();
 
-  return {
-    field,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  }
-}
+  const { mutateAsync: deleteQuestionAsync, status, isError, error } =
+    trpc.form.deleteQuestion.useMutation({
+      onSuccess: async (data, variables) => {
+        await utils.form.getQuestion.invalidate({ questionId: data.id });
+        await utils.form.getQuestion.invalidate({ questionId: variables.questionId });
+        await utils.form.listQuestions.invalidate();
+      },
+    });
 
-//, list fields hook
-export const useListFields = (formId: string) => {
-  const {
-    data: fields,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  } = trpc.form.listFields.useQuery(
-    { formId },
-    { enabled: !!formId }
-  )
+  return { deleteQuestionAsync, status, isError, error };
+};
 
-  return {
-    fields,
-    isLoading,
-    isFetching,
-    isFetched,
-    isError,
-    error,
-    refetch,
-  }
-}
+//, get question
+export const useGetQuestion = (questionId: string | null) => {
+  const { data: question, isLoading, isFetching, isError, error, refetch } =
+    trpc.form.getQuestion.useQuery({ questionId: questionId ?? "" }, { enabled: !!questionId });
+
+  return { question, isLoading, isFetching, isError, error, refetch };
+};
+
+//, list questions of a form
+export const useListQuestions = (formId: string | null) => {
+  const { data: questions, isLoading, isFetching, isError, error, refetch } =
+    trpc.form.listQuestions.useQuery({ formId: formId ?? "" }, { enabled: !!formId });
+
+  return { questions, isLoading, isFetching, isError, error, refetch };
+};

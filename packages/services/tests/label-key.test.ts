@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toLabelKey } from "../form-field/label-key";
+import { toLabelKey } from "../question/label-key";
 
 describe("toLabelKey", () => {
   it("lowercases and hyphenates", () => {

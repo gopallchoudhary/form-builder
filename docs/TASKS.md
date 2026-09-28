@@ -137,50 +137,76 @@ Goal: the full data model for forms, questions, responses and analytics.
 
 ### Schema
 
-- [ ] Rewrite `packages/database/models/forms.ts` — add `slug` (unique), `layout_mode`,
-      `theme_key`, `status`, `password_hash`, `show_progress`, `allow_back`,
-      `one_response_per_device`, `max_responses`, `closes_at`, `thank_you_{title,message,redirect_url}`,
-      `version`, `published_at`
-- [ ] Add `packages/database/models/form-page.ts` — `form_id`, `title`, `description`, `position numeric(6,2)`
-- [ ] Add `packages/database/models/question.ts` — replaces `form_fields`; 13 `kind`s,
-      `page_id`, `position`, `label_key`, `description`, `placeholder`, `is_required`,
-      `settings jsonb`, `deleted_at`
-- [ ] Add `packages/database/models/form-session.ts` — respondent run; `device_id`, `form_version`,
-      `status`, `started_at`, `last_seen_at`, `completed_at`, `current_{page,question}_id`,
-      `user_agent`, `ip_hash` (**no raw IP**)
-- [ ] Add `packages/database/models/form-answer.ts` — `value_{text,number,date,json}`,
-      **denormalised** `question_{label,label_key,kind}`, `is_draft`
-- [ ] Add `packages/database/models/form-event.ts` — `bigserial`, `type` enum, `question_id`, `page_id`
-- [ ] Delete `packages/database/models/form-field.ts`
+- [x] `models/form.ts` — `slug` (unique), `layout_mode`, `theme_key`, `status`, `password_hash`,
+      `show_progress`, `allow_back`, `one_response_per_device`, `max_responses`, `closes_at`,
+      `thank_you_{title,message,redirect_url}`, `version`, `published_at`
+- [x] `models/form-page.ts` — `form_id`, `title`, `description`, `position numeric(8,2)`
+- [x] `models/question.ts` — 13 `kind`s, `page_id`, `position`, `label_key`, `description`,
+      `placeholder`, `is_required`, `settings jsonb`, `deleted_at`
+- [x] `models/form-session.ts` — `device_id`, `form_version`, `status`, `started_at`,
+      `last_seen_at`, `completed_at`, `current_{page,question}_id`, `user_agent`, `ip_hash`
+- [x] `models/form-answer.ts` — `value_{text,number,date,json}`, denormalised
+      `question_{label,label_key,kind}`, `is_draft`
+- [x] `models/form-event.ts` — `bigserial`, 7 `type`s, `question_id`, `page_id`, `form_version`
+- [x] Deleted `models/form-field.ts`
+- [x] `theme_key` is a varchar, not a pgEnum, so adding a preset needs no migration
 
 ### Indexes & constraints
 
-- [ ] `forms`: index on `created_by`, unique on `slug`
-- [ ] `form_pages`: unique `(form_id, position)`
-- [ ] `questions`: **partial** unique `(form_id, label_key)` where `deleted_at is null`
-- [ ] `questions`: **partial** unique `(form_id, page_id, position)` where `deleted_at is null`
-- [ ] `form_sessions`: **partial** unique `(form_id, device_id)` where `status = 'COMPLETED'`
-- [ ] `form_sessions`: indexes on `(form_id, completed_at)`, `(form_id, started_at)`
-- [ ] `form_events`: indexes on `(form_id, created_at)`, `(form_id, type, created_at)`
-- [ ] `form_answers`: unique `(session_id, question_id)` — the upsert target
+- [x] `forms`: unique `slug`, index on `created_by` and `status`
+- [x] `form_pages`: unique `(form_id, position)`
+- [x] `questions`: partial unique `(form_id, label_key)` where `deleted_at is null`
+- [x] `questions`: **two** partial position indexes — `(form_id, page_id, position)` where
+      `page_id is not null`, and `(form_id, position)` where `page_id is null`. Postgres treats
+      NULLs as distinct, so a single index would enforce nothing for `STEP` layouts
+- [x] `form_sessions`: partial unique `(form_id, device_id)` where `status = 'COMPLETED'`, so an
+      abandoned draft never blocks a retry
+- [x] `form_sessions`: indexes on `completed_at`, `started_at`, `status`
+- [x] `form_events`: indexes on `(form_id, created_at)`, `(form_id, type, created_at)`,
+      `(session_id, created_at)`
+- [x] `form_answers`: unique `(session_id, question_id)` — the upsert target
+- [x] `form_answers.question_id` is `ON DELETE restrict` so history survives a deleted question
 
 ### Migration
 
-- [ ] `pnpm db:generate` for the new tables
-- [ ] Confirm it drops `forms` / `form_fields` data as intended
-- [ ] `pnpm db:migrate` against a real database
-- [ ] Confirm `users` rows survive
+- [x] `0003_drop_legacy_form_schema.sql` + `0004_create_form_schema.sql`, both tool-generated
+- [x] Verified: a third `generate` reports **no schema changes**, so the snapshots and the models agree
+- [ ] **Apply them** to a real database — `pnpm db:migrate` still has not run against Postgres,
+      because Docker's daemon is down. PGlite verified the SQL, but not against your dev data.
+- [ ] Confirm `users` rows survive on the existing dev database
 
-### Service integration test harness
+### Service integration tests
 
-- [ ] `packages/database/tests/db.ts` — a client pointed at a test database
-- [ ] Transaction-per-test wrapper so each test rolls back
-- [ ] `DATABASE_URL_TEST` in `.env.example`, skipped when unset
+- [x] `tests/db.ts` — PGlite harness (real PostgreSQL in WebAssembly, so no Docker needed),
+      applies every migration in order
+- [x] `tests/schema.test.ts` — 15 tests asserting the *constraints*, not just the columns:
+      duplicate slug, enum rejection, unique positions in both layouts, soft-delete freeing a
+      `labelKey`, one-completion-per-device, answer upsert, `ON DELETE restrict`, denormalised
+      labels surviving a rename, and cascade behaviour
+- [ ] `DATABASE_URL_TEST` for tests against a real server (only needed once services take part)
+
+### Forced ripple from the schema change
+
+Renaming `form_fields` → `questions` and `type` → `kind` touched everything above the database.
+Done here rather than in Phase 2 so every commit stays green.
+
+- [x] `services/form-field/` → `services/question/`, soft delete instead of hard delete
+- [x] `services/utils/slug.ts` — `generateSlug` with a collision retry in `FormService.createForm`
+- [x] `services/utils/ownership.ts` — asserts against `questions`
+- [x] tRPC procedures renamed to `createQuestion` / `updateQuestion` / `deleteQuestion` /
+      `getQuestion` / `listQuestions` (still on the `form` router; the split is Phase 3)
+- [x] `apps/web/hooks/api/form` rewritten, and the invalidation bugs fixed — they were
+      invalidating `getField` with no input, and delete did not clear it
+- [x] Builder page updated for `kind` / `position`; offers the 6 kinds that need no per-kind
+      settings, so no question can be created in a state the renderer cannot display
+- [x] Fixed `server.listen` failing asynchronously and killing the process with an unhandled
+      `error` event (surfaced while smoke-testing the new schema)
 
 ### Gate
 
-- [ ] `pnpm db:migrate` runs clean on an empty database **and** on the existing dev one
-- [ ] `pnpm lint` / `check-types` / `test` green
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 65/65 · `pnpm build` 2/2
+- [x] Live server: 11 OpenAPI paths, correct `protect` flags, 13-value `kind` enum in the document
+- [ ] `pnpm db:migrate` against a real database
 
 ---
 
@@ -190,20 +216,22 @@ Goal: all business logic, each service owning its zod input models and enforcing
 
 ### Shared utils
 
-- [ ] `utils/slug.ts` — `generateSlug` + uniqueness retry for forms
+- [x] `utils/slug.ts` — `generateSlug` (collisions retried in `FormService.createForm`)
 - [ ] `utils/theme.ts` — the 4 curated presets, the single source both web and API read
 - [ ] `utils/answer-validation.ts` — the `kind` → zod → normalised value mapper (one place)
-- [ ] `question-settings.ts` — **discriminated union** of per-kind `settings`
-      (the single source for tRPC input, the service, and the builder's config controls)
+- [ ] `question-settings.ts` — **discriminated union** of per-kind `settings`.
+      The column exists and the builder does not write it yet, so validate it the moment
+      something starts reading it back.
 
 ### Services
 
-- [ ] `form/` — `create` (slug), `getFullDefinition` (form + pages + questions, owned),
-      `updateSettings`, `listByUserId` (+ response counts), `delete`, `publish` (bumps `version`,
-      stamps `published_at`), `unpublish`
-- [ ] `form-page/` — CRUD + `reorder` (renumber `position` in one transaction)
-- [ ] `question/` — CRUD + `duplicate` + `reorder`, **soft** delete, write-once `labelKey`,
-      `settings` validated against `kind`
+- [x] `question/` — basic CRUD, soft delete, write-once `labelKey`, ownership enforced
+- [ ] `question/` — page assignment, `reorder` (renumber `position` in one transaction),
+      `duplicate`, and per-kind `settings` validation
+- [ ] `form/` — `updateSettings`, `delete`, `publish` (bumps `version`, stamps `published_at`),
+      `unpublish`, slug editing
+- [ ] `form/` — `getFullDefinition` (form + pages + questions)
+- [ ] `form-page/` — CRUD + `reorder`
 - [ ] `access/` (respondent side) — `getPublishedFormBySlug` (never leaks creator email or draft
       state), `unlock(password)`, `getOrResumeSession`, `saveDraft` (idempotent upsert),
       `submit` (re-validates every answer, enforces max-responses / closes-at / one-per-device
@@ -211,15 +239,14 @@ Goal: all business logic, each service owning its zod input models and enforcing
 - [ ] `response/` — paginated list with filters, `toCsv` (hand-rolled, no dependency)
 - [ ] `analytics/` — `formSummary`, `overview`, `funnel`, `questionDropOff`,
       `answerDistribution`, `timeToComplete` — all scoped to the owner's forms
-- [ ] Reuse `utils/errors.ts` and `utils/ownership.ts` from Phase 0 everywhere
 
 ### Tests
 
+- [x] `slug.test.ts` — charset, 64-char limit, random suffix, no-trailing-hyphen
 - [ ] `question-settings` union — valid + invalid per kind
 - [ ] `answer-validation` — every kind, including multi-select and address
-- [ ] `generateSlug` — collision retry, charset, length
 - [ ] `access.submit` — enforces each limit, is idempotent
-- [ ] Integration tests for ownership on every service method
+- [ ] Integration tests for ownership on every service method (needs `DATABASE_URL_TEST`)
 
 ### Gate
 
@@ -452,6 +479,11 @@ Dashboard (all forms) and per form.
 - [ ] File upload, matrix/grid questions, respondent email gating, unique invite tokens
 - [ ] `form_daily_stats` rollup table — only once a real dataset shows live aggregation is too slow
 - [ ] `.gitattributes` — git currently warns about LF→CRLF on every commit
+- [ ] Convert the naive `created_at` / `updated_at` columns to `timestamptz`. Every timestamp in
+      the new tables is timezone-naive to match the existing convention; instants like
+      `closes_at` and `completed_at` would be more correct as `timestamptz`
+- [ ] Add a transaction-per-test wrapper for tests that talk to a real server — PGlite gives each
+      test its own database instead
 
 ---
 

@@ -1,21 +1,21 @@
 import { authenticatedProcedure, router } from "../../trpc";
-import { formService, formFieldService } from "../../services";
+import { formService, questionService } from "../../services";
 import { generatePath } from "../../utils/path-generator";
 import {
-  createFieldInputModel,
-  createFieldOutputModel,
   createFormInputModel,
   createFormOutputModel,
-  deleteFieldInputModel,
-  deleteFieldOutputModel,
-  getFieldInputModel,
-  getFieldOutputModel,
-  listFieldsInputModel,
-  listFieldsOutputModel,
+  createQuestionInputModel,
+  createQuestionOutputModel,
+  deleteQuestionInputModel,
+  deleteQuestionOutputModel,
+  getQuestionInputModel,
+  getQuestionOutputModel,
   listFormsInputModel,
   listFormsOutputModel,
-  updateFieldInputModel,
-  updateFieldOutputModel,
+  listQuestionsInputModel,
+  listQuestionsOutputModel,
+  updateQuestionInputModel,
+  updateQuestionOutputModel,
 } from "./model";
 
 const TAGS = ["Form"];
@@ -36,8 +36,7 @@ export const formRouter = router({
     .input(createFormInputModel)
     .output(createFormOutputModel)
     .mutation(async ({ input, ctx }) => {
-      const { id } = await formService.createForm(ctx.user.id, input);
-      return { id };
+      return formService.createForm(ctx.user.id, input);
     }),
 
   //. list forms
@@ -57,91 +56,91 @@ export const formRouter = router({
       return formService.listFormsByUserId({ userId: ctx.user.id });
     }),
 
-  //. create field
-  createField: authenticatedProcedure
+  //. create question
+  createQuestion: authenticatedProcedure
     .meta({
       openapi: {
         method: "POST",
-        path: getPath("/createField"),
+        path: getPath("/createQuestion"),
         tags: TAGS,
         protect: true,
-        summary: "Add a field to a form",
+        summary: "Add a question to one of your forms",
       },
     })
-    .input(createFieldInputModel)
-    .output(createFieldOutputModel)
+    .input(createQuestionInputModel)
+    .output(createQuestionOutputModel)
     .mutation(async ({ input, ctx }) => {
-      const { id, labelKey } = await formFieldService.createField(ctx.user.id, input);
+      const { id, labelKey } = await questionService.createQuestion(ctx.user.id, input);
       return { id, labelKey };
     }),
 
-  //. update field
-  updateField: authenticatedProcedure
+  //. update question
+  updateQuestion: authenticatedProcedure
     .meta({
       openapi: {
         method: "PATCH",
-        path: getPath("/updateField"),
+        path: getPath("/updateQuestion"),
         tags: TAGS,
         protect: true,
-        summary: "Update a field of one of your forms",
+        summary: "Update a question of one of your forms",
       },
     })
-    .input(updateFieldInputModel)
-    .output(updateFieldOutputModel)
+    .input(updateQuestionInputModel)
+    .output(updateQuestionOutputModel)
     .mutation(async ({ input, ctx }) => {
-      const { id } = await formFieldService.updateField(ctx.user.id, input);
+      const { id } = await questionService.updateQuestion(ctx.user.id, input);
       return { id };
     }),
 
-  //. delete field
-  deleteField: authenticatedProcedure
+  //. delete question
+  deleteQuestion: authenticatedProcedure
     .meta({
       openapi: {
         method: "DELETE",
-        path: getPath("/deleteField"),
+        path: getPath("/deleteQuestion"),
         tags: TAGS,
         protect: true,
-        summary: "Delete a field of one of your forms",
+        summary: "Remove a question from one of your forms",
       },
     })
-    .input(deleteFieldInputModel)
-    .output(deleteFieldOutputModel)
+    .input(deleteQuestionInputModel)
+    .output(deleteQuestionOutputModel)
     .mutation(async ({ input, ctx }) => {
-      const { id } = await formFieldService.deleteField(ctx.user.id, input);
+      const { id } = await questionService.deleteQuestion(ctx.user.id, input);
       return { id };
     }),
 
-  //. get field
-  getField: authenticatedProcedure
+  //. get question
+  getQuestion: authenticatedProcedure
     .meta({
       openapi: {
         method: "GET",
-        path: getPath("/getField"),
+        path: getPath("/getQuestion"),
         tags: TAGS,
         protect: true,
-        summary: "Get one of your fields",
+        summary: "Get one of your questions",
       },
     })
-    .input(getFieldInputModel)
-    .output(getFieldOutputModel)
+    .input(getQuestionInputModel)
+    .output(getQuestionOutputModel)
     .query(async ({ input, ctx }) => {
-      return formFieldService.getField(ctx.user.id, input);
+      return questionService.getQuestion(ctx.user.id, input);
     }),
 
-  //. list fields
-  listFields: authenticatedProcedure
+  //. list questions
+  listQuestions: authenticatedProcedure
     .meta({
       openapi: {
         method: "GET",
-        path: getPath("/listFields"),
+        path: getPath("/listQuestions"),
         tags: TAGS,
         protect: true,
-        summary: "List the fields of one of your forms",
+        summary: "List the questions of one of your forms, in order",
       },
     })
-    .input(listFieldsInputModel)
-    .output(listFieldsOutputModel)
+    .input(listQuestionsInputModel)
+    .output(listQuestionsOutputModel)
     .query(async ({ input, ctx }) => {
-      return formFieldService.listFields(ctx.user.id, input);
+      return questionService.listQuestions(ctx.user.id, input);
     }),
 });

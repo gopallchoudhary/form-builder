@@ -8,17 +8,19 @@ import { z } from "zod";
 // session rather than accepting it from the caller.
 export { createFormInput as createFormInputModel } from "@repo/services/form/model";
 export {
-  createFieldInput as createFieldInputModel,
-  updateFieldInput as updateFieldInputModel,
-  deleteFieldInput as deleteFieldInputModel,
-  getFieldInput as getFieldInputModel,
-  listFieldsInput as listFieldsInputModel,
-} from "@repo/services/form-field/model";
+  createQuestionInput as createQuestionInputModel,
+  updateQuestionInput as updateQuestionInputModel,
+  deleteQuestionInput as deleteQuestionInputModel,
+  getQuestionInput as getQuestionInputModel,
+  listQuestionsInput as listQuestionsInputModel,
+  questionKindSchema as questionKindModel,
+} from "@repo/services/question/model";
 
 // ── Form procedures ────────────────────────────────────────────────────────────
 
 export const createFormOutputModel = z.object({
   id: z.string().describe("Id of the created form"),
+  slug: z.string().describe("Share slug for the public URL"),
 });
 
 /** The signed-in user's own forms — nothing to accept from the caller. */
@@ -27,56 +29,70 @@ export const listFormsInputModel = z.undefined();
 export const listFormsOutputModel = z.array(
   z.object({
     id: z.string().describe("Id of the form"),
+    slug: z.string().describe("Share slug for the public URL"),
     title: z.string().describe("Title of the form"),
     description: z.string().nullable().optional().describe("Description of the form"),
+    status: z.enum(["DRAFT", "PUBLISHED", "CLOSED"]).describe("Publication state"),
     createdAt: z.date().nullable().describe("When the form was created"),
     updatedAt: z.date().nullable().describe("When the form was last updated"),
   }),
 );
 
-// ── Shared field type enum ─────────────────────────────────────────────────────
+// ── Shared question output shape ───────────────────────────────────────────────
 
-export const fieldTypeModel = z.enum(["TEXT", "NUMBER", "EMAIL", "YES_NO", "PASSWORD"]);
-
-// ── Shared field output shape ──────────────────────────────────────────────────
-
-export const fieldOutputModel = z.object({
-  id: z.string().describe("Id of the field"),
+export const questionOutputModel = z.object({
+  id: z.string().describe("Id of the question"),
+  formId: z.string().describe("Id of the owning form"),
+  pageId: z.string().nullable().describe("Page this question sits on, if any"),
+  position: z.string().nullable().describe("Fractional index for ordering"),
+  kind: z.enum([
+    "SHORT_TEXT",
+    "LONG_TEXT",
+    "NUMBER",
+    "EMAIL",
+    "PHONE",
+    "PASSWORD",
+    "YES_NO",
+    "SINGLE_CHOICE",
+    "MULTI_CHOICE",
+    "DROPDOWN",
+    "RATING",
+    "DATE",
+    "ADDRESS",
+  ]).describe("Question input type"),
   label: z.string().describe("Human-readable label"),
   labelKey: z.string().describe("Stable slug key — write-once"),
-  placeholder: z.string().nullable().optional().describe("Placeholder text"),
   description: z.string().nullable().optional().describe("Helper text"),
-  isRequired: z.boolean().describe("Whether the field is required"),
-  type: fieldTypeModel.describe("Field input type"),
-  index: z.string().nullable().describe("Fractional index for ordering"),
-  formId: z.string().nullable().describe("Parent form id"),
-  createdAt: z.date().nullable().describe("When the field was created"),
-  updatedAt: z.date().nullable().describe("When the field was last updated"),
+  placeholder: z.string().nullable().optional().describe("Placeholder text"),
+  isRequired: z.boolean().describe("Whether an answer is required"),
+  settings: z.unknown().describe("Per-kind configuration, validated per kind"),
+  createdAt: z.date().nullable().describe("When the question was created"),
+  updatedAt: z.date().nullable().describe("When the question was last updated"),
 });
 
-// ── createField ────────────────────────────────────────────────────────────────
+// ── createQuestion ─────────────────────────────────────────────────────────────
 
-export const createFieldOutputModel = z.object({
-  id: z.string().describe("Id of the created field"),
+export const createQuestionOutputModel = z.object({
+  id: z.string().describe("Id of the created question"),
   labelKey: z.string().describe("Generated stable slug key"),
 });
 
-// ── updateField ────────────────────────────────────────────────────────────────
+// ── updateQuestion ─────────────────────────────────────────────────────────────
 
-export const updateFieldOutputModel = z.object({
-  id: z.string().describe("Id of the updated field"),
+export const updateQuestionOutputModel = z.object({
+  id: z.string().describe("Id of the updated question"),
 });
 
-// ── deleteField ────────────────────────────────────────────────────────────────
+// ── deleteQuestion ─────────────────────────────────────────────────────────────
 
-export const deleteFieldOutputModel = z.object({
-  id: z.string().describe("Id of the deleted field"),
+export const deleteQuestionOutputModel = z.object({
+  id: z.string().describe("Id of the deleted question"),
 });
 
-// ── getField ───────────────────────────────────────────────────────────────────
+// ── getQuestion ────────────────────────────────────────────────────────────────
 
-export const getFieldOutputModel = fieldOutputModel;
+export const getQuestionOutputModel = questionOutputModel;
 
-// ── listFields ─────────────────────────────────────────────────────────────────
+// ── listQuestions ──────────────────────────────────────────────────────────────
 
-export const listFieldsOutputModel = z.array(fieldOutputModel);
+export const listQuestionsOutputModel = z.array(questionOutputModel);

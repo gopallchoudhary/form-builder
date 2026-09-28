@@ -10,10 +10,11 @@ import {
   ArrowLeftIcon,
   GripVerticalIcon,
   TypeIcon,
+  AlignLeftIcon,
   HashIcon,
   MailIcon,
+  PhoneIcon,
   ToggleLeftIcon,
-  LockIcon,
   ChevronRightIcon,
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
@@ -32,24 +33,30 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import {
-  useCreateField,
-  useUpdateField,
-  useDeleteField,
-  useGetField,
-  useListFields,
+  useCreateQuestion,
+  useUpdateQuestion,
+  useDeleteQuestion,
+  useGetQuestion,
+  useListQuestions,
 } from "~/hooks/api/form";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type FieldType = "TEXT" | "NUMBER" | "EMAIL" | "YES_NO" | "PASSWORD";
+/**
+ * The API supports 13 kinds. The builder offers the subset that needs no per-kind
+ * configuration yet — the choice, rating, date and address editors arrive with the
+ * settings work in the builder phase, so a question is never created in a state the
+ * respondent renderer cannot display.
+ */
+type FieldType = "SHORT_TEXT" | "LONG_TEXT" | "NUMBER" | "EMAIL" | "PHONE" | "YES_NO";
 
 interface FieldSnapshot {
   id: string;
   label: string;
   labelKey: string;
-  type: FieldType;
+  kind: FieldType;
   isRequired: boolean;
-  index: string | null;
+  position: string | null;
   placeholder?: string | null;
   description?: string | null;
 }
@@ -58,7 +65,7 @@ type AddFieldFormValues = {
   label: string;
   placeholder: string;
   description: string;
-  type: FieldType;
+  kind: FieldType;
   isRequired: boolean;
 };
 
@@ -66,7 +73,7 @@ type EditFieldFormValues = {
   label: string;
   placeholder: string;
   description: string;
-  type: FieldType;
+  kind: FieldType;
   isRequired: boolean;
 };
 
@@ -77,21 +84,22 @@ const FIELD_TYPE_META: {
   label: string;
   icon: React.ReactNode;
 }[] = [
-  { value: "TEXT",     label: "Text",     icon: <TypeIcon className="size-3.5" /> },
-  { value: "NUMBER",   label: "Number",   icon: <HashIcon className="size-3.5" /> },
-  { value: "EMAIL",    label: "Email",    icon: <MailIcon className="size-3.5" /> },
-  { value: "YES_NO",   label: "Yes / No", icon: <ToggleLeftIcon className="size-3.5" /> },
-  { value: "PASSWORD", label: "Password", icon: <LockIcon className="size-3.5" /> },
+  { value: "SHORT_TEXT", label: "Short text", icon: <TypeIcon className="size-3.5" /> },
+  { value: "LONG_TEXT", label: "Long text", icon: <AlignLeftIcon className="size-3.5" /> },
+  { value: "NUMBER", label: "Number", icon: <HashIcon className="size-3.5" /> },
+  { value: "EMAIL", label: "Email", icon: <MailIcon className="size-3.5" /> },
+  { value: "PHONE", label: "Phone", icon: <PhoneIcon className="size-3.5" /> },
+  { value: "YES_NO", label: "Yes / No", icon: <ToggleLeftIcon className="size-3.5" /> },
 ];
 
-function getTypeMeta(type: FieldType) {
-  return FIELD_TYPE_META.find((m) => m.value === type) ?? FIELD_TYPE_META[0]!;
+function getTypeMeta(kind: FieldType) {
+  return FIELD_TYPE_META.find((m) => m.value === kind) ?? FIELD_TYPE_META[0]!;
 }
 
-/** Returns the next fractional index after all existing fields */
-function nextIndex(fields: FieldSnapshot[]): string {
+/** Returns the next fractional position after all existing questions. */
+function nextPosition(fields: FieldSnapshot[]): string {
   if (fields.length === 0) return "1.00";
-  const max = Math.max(...fields.map((f) => parseFloat(f.index ?? "0")));
+  const max = Math.max(...fields.map((f) => parseFloat(f.position ?? "0")));
   return (max + 1).toFixed(2);
 }
 
@@ -110,7 +118,7 @@ function FieldCard({
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const meta = getTypeMeta(field.type);
+  const meta = getTypeMeta(field.kind);
 
   return (
     <div
@@ -183,7 +191,7 @@ function AddFieldPanel({
   fields: FieldSnapshot[];
   onFieldCreated: (field: FieldSnapshot) => void;
 }) {
-  const { createFieldAsync, status } = useCreateField();
+  const { createQuestionAsync, status } = useCreateQuestion();
   const isPending = status === "pending";
 
   const {
@@ -197,30 +205,30 @@ function AddFieldPanel({
       label: "",
       placeholder: "",
       description: "",
-      type: "TEXT",
+      kind: "SHORT_TEXT",
       isRequired: false,
     },
   });
 
   const onSubmit: SubmitHandler<AddFieldFormValues> = async (data) => {
-    const index = nextIndex(fields);
-    const { id, labelKey } = await createFieldAsync({
+    const position = nextPosition(fields);
+    const { id, labelKey } = await createQuestionAsync({
       formId,
       label: data.label,
       placeholder: data.placeholder || undefined,
       description: data.description || undefined,
-      type: data.type,
+      kind: data.kind,
       isRequired: data.isRequired,
-      index,
+      position,
     });
 
     onFieldCreated({
       id,
       labelKey,
       label: data.label,
-      type: data.type,
+      kind: data.kind,
       isRequired: data.isRequired,
-      index,
+      position,
       placeholder: data.placeholder || null,
       description: data.description || null,
     });
@@ -262,7 +270,7 @@ function AddFieldPanel({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="add-type">Type</Label>
           <Controller
-            name="type"
+            name="kind"
             control={control}
             render={({ field }) => (
               <Select
@@ -372,8 +380,8 @@ function EditFieldPanel({
   onClose: () => void;
   onSaved: (updated: Partial<FieldSnapshot>) => void;
 }) {
-  const { field, isLoading } = useGetField(fieldId);
-  const { updateFieldAsync, status } = useUpdateField();
+  const { question, isLoading } = useGetQuestion(fieldId);
+  const { updateQuestionAsync, status } = useUpdateQuestion();
   const isUpdating = status === "pending";
 
   const {
@@ -385,29 +393,29 @@ function EditFieldPanel({
   } = useForm<EditFieldFormValues>();
 
   useEffect(() => {
-    if (field) {
+    if (question) {
       reset({
-        label: field.label,
-        placeholder: field.placeholder ?? "",
-        description: field.description ?? "",
-        type: field.type as FieldType,
-        isRequired: field.isRequired,
+        label: question.label,
+        placeholder: question.placeholder ?? "",
+        description: question.description ?? "",
+        kind: question.kind as FieldType,
+        isRequired: question.isRequired,
       });
     }
-  }, [field, reset]);
+  }, [question, reset]);
 
   const onSubmit: SubmitHandler<EditFieldFormValues> = async (data) => {
-    await updateFieldAsync({
-      fieldId,
+    await updateQuestionAsync({
+      questionId: fieldId,
       label: data.label,
       placeholder: data.placeholder || undefined,
       description: data.description || undefined,
-      type: data.type,
+      kind: data.kind,
       isRequired: data.isRequired,
     });
     onSaved({
       label: data.label,
-      type: data.type,
+      kind: data.kind,
       isRequired: data.isRequired,
       placeholder: data.placeholder || null,
       description: data.description || null,
@@ -442,7 +450,7 @@ function EditFieldPanel({
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">Edit Field</h3>
           <p className="truncate font-mono text-xs text-muted-foreground">
-            {field?.labelKey}
+            {question?.labelKey}
           </p>
         </div>
       </div>
@@ -471,7 +479,7 @@ function EditFieldPanel({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="edit-type">Type</Label>
           <Controller
-            name="type"
+            name="kind"
             control={control}
             render={({ field: f }) => (
               <Select
@@ -588,18 +596,18 @@ const FormBuilderPage = () => {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [deletingFieldId, setDeletingFieldId] = useState<string | null>(null);
 
-  const { fields: fetchedFields } = useListFields(formId);
+  const { questions: fetchedQuestions } = useListQuestions(formId);
 
   useEffect(() => {
-    if (fetchedFields) {
-      setFields(fetchedFields as FieldSnapshot[]);
+    if (fetchedQuestions) {
+      setFields(fetchedQuestions as FieldSnapshot[]);
     }
-  }, [fetchedFields]);
+  }, [fetchedQuestions]);
 
-  const { deleteFieldAsync } = useDeleteField();
+  const { deleteQuestionAsync } = useDeleteQuestion();
 
   const orderedFields = [...fields].sort(
-    (a, b) => parseFloat(a.index ?? "0") - parseFloat(b.index ?? "0")
+    (a, b) => parseFloat(a.position ?? "0") - parseFloat(b.position ?? "0")
   );
 
   const handleFieldCreated = (field: FieldSnapshot) => {
@@ -609,7 +617,7 @@ const FormBuilderPage = () => {
   const handleDelete = async (fieldId: string) => {
     setDeletingFieldId(fieldId);
     try {
-      await deleteFieldAsync({ fieldId });
+      await deleteQuestionAsync({ questionId: fieldId });
       setFields((prev) => prev.filter((f) => f.id !== fieldId));
       if (selectedFieldId === fieldId) setSelectedFieldId(null);
     } finally {

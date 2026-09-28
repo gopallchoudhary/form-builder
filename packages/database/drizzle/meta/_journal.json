@@ -22,6 +22,20 @@
       "when": 1790566069332,
       "tag": "0002_add_user_password_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790568170501,
+      "tag": "0003_drop_legacy_form_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790568178530,
+      "tag": "0004_create_form_schema",
+      "breakpoints": true
     }
   ]
 }

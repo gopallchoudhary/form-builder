@@ -1,7 +1,7 @@
 import UserService from "@repo/services/user";
 import FormService from "@repo/services/form";
-import FormFieldService from "@repo/services/form-field";
+import QuestionService from "@repo/services/question";
 
 export const userService = new UserService();
 export const formService = new FormService();
-export const formFieldService = new FormFieldService();
+export const questionService = new QuestionService();
