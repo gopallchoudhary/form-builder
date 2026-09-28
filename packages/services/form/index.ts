@@ -1,4 +1,4 @@
-import { and, asc, count, db as defaultDb, desc, eq, isNull, type Database } from "@repo/database";
+import { and, asc, count, db as defaultDb, desc, eq, isNull, sql, type Database } from "@repo/database";
 import { formsTable } from "@repo/database/models/form";
 import { formPagesTable } from "@repo/database/models/form-page";
 import { formSessionsTable } from "@repo/database/models/form-session";
@@ -129,8 +129,13 @@ class FormService {
   public async getFormById(userId: string, formId: string) {
     await assertFormOwnership(formId, userId, this.db);
 
+    // `passwordProtected` is derived rather than selected: the hash itself never leaves
+    // the database, but the builder still has to be able to say whether one is set.
     const rows = await this.db
-      .select(FORM_COLUMNS)
+      .select({
+        ...FORM_COLUMNS,
+        passwordProtected: sql<boolean>`${formsTable.passwordHash} is not null`,
+      })
       .from(formsTable)
       .where(eq(formsTable.id, formId))
       .limit(1);

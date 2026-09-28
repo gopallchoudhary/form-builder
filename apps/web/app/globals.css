@@ -44,73 +44,90 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/**
+ * The app's own chrome, themed from DESIGN.md so the builder and the product look like
+ * the same thing. The respondent form is themed separately, per form, by
+ * `components/form/theme-provider.tsx`; these tokens are for everything around it.
+ *
+ * Each value names the DESIGN.md token it comes from. The two deliberate departures:
+ *
+ * - `--muted-foreground` is mute darkened from `#868685` to `#6b6d6a`. Mute on the sage
+ *   canvas is about 2.6:1, which is below the contrast floor for text; captions and
+ *   helper text are still text.
+ * - `--ring` is ink rather than lime. Lime is the CTA colour, and a lime focus ring on a
+ *   white or lime surface is close to invisible; focus has to win over brand.
+ *
+ * `--radius: 1.25rem` is chosen so `rounded-md` lands on 18px — a true pill on the 36px
+ * default button — and `rounded-xl` lands on 24px, the canonical card radius.
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 1.25rem;
+  --background: #e8ebe6; /* canvas-soft — surface contrast is the elevation cue */
+  --foreground: #0e0f0c; /* ink */
+  --card: #ffffff; /* canvas — cards sit on the sage band */
+  --card-foreground: #0e0f0c;
+  --popover: #ffffff;
+  --popover-foreground: #0e0f0c;
+  --primary: #9fe870; /* wise green — the universal CTA */
+  --primary-foreground: #0e0f0c;
+  --secondary: #e2f6d5; /* wise green pale */
+  --secondary-foreground: #0e0f0c;
+  --muted: #e8ebe6;
+  --muted-foreground: #6b6d6a; /* mute, darkened for legibility */
+  --accent: #dce0d8;
+  --accent-foreground: #0e0f0c;
+  --destructive: #d03238; /* negative */
+  --border: #c8ccc4; /* hairline; ink at full strength is too heavy on every card */
+  --input: #c8ccc4;
+  --ring: #0e0f0c; /* ink, so focus reads on sage, white and lime alike */
+  --chart-1: #9fe870;
+  --chart-2: #2ead4b; /* positive */
+  --chart-3: #ffd11a; /* warning */
+  --chart-4: #38c8ff; /* accent cyan */
+  --chart-5: #ffc091; /* accent orange */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0e0f0c;
+  --sidebar-primary: #0e0f0c; /* the sidebar's selected row is ink, keeping lime for one action */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e8ebe6;
+  --sidebar-accent-foreground: #0e0f0c;
+  --sidebar-border: #c8ccc4;
+  --sidebar-ring: #0e0f0c;
 }
 
+/** Ink-based, the way DESIGN.md's dark hero band works: near-black page, lime accent. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0e0f0c;
+  --foreground: #e8ebe6;
+  --card: #1a1c18;
+  --card-foreground: #e8ebe6;
+  --popover: #1a1c18;
+  --popover-foreground: #e8ebe6;
+  --primary: #9fe870;
+  --primary-foreground: #0e0f0c;
+  --secondary: #23301c;
+  --secondary-foreground: #e8ebe6;
+  --muted: #1a1c18;
+  --muted-foreground: #a3a5a0;
+  --accent: #262923;
+  --accent-foreground: #e8ebe6;
+  --destructive: #e06a6f;
+  --border: #34372f;
+  --input: #45483f;
+  --ring: #9fe870;
+  --chart-1: #9fe870;
+  --chart-2: #2ead4b;
+  --chart-3: #ffd11a;
+  --chart-4: #38c8ff;
+  --chart-5: #ffc091;
+  --sidebar: #1a1c18;
+  --sidebar-foreground: #e8ebe6;
+  --sidebar-primary: #9fe870;
+  --sidebar-primary-foreground: #0e0f0c;
+  --sidebar-accent: #262923;
+  --sidebar-accent-foreground: #e8ebe6;
+  --sidebar-border: #34372f;
+  --sidebar-ring: #9fe870;
 }
 
 @layer base {

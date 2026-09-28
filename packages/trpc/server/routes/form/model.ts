@@ -36,16 +36,27 @@ export const formSettingsOutputSchema = z.object({
   thankYouTitle: z.string().nullable(),
   thankYouMessage: z.string().nullable(),
   thankYouRedirectUrl: z.string().nullable(),
+  /** Whether an audience has to enter a password. The hash itself is never returned. */
+  passwordProtected: z.boolean(),
   version: z.number().int(),
   publishedAt: z.date().nullable(),
   createdAt: z.date().nullable(),
   updatedAt: z.date().nullable(),
 });
 
-export const formOutputSchema = formSettingsOutputSchema.extend({
-  pages: z.array(formPageDefinitionSchema),
-  questions: z.array(questionDefinitionSchema),
-});
+/**
+ * The whole editable form, which the builder store hydrates from.
+ *
+ * `passwordProtected` is deliberately absent: it belongs to the settings panel, and
+ * carrying it on the definition would put a field in the store that no builder action ever
+ * reads — and that the autosave diff would have to know to ignore.
+ */
+export const formOutputSchema = formSettingsOutputSchema
+  .omit({ passwordProtected: true })
+  .extend({
+    pages: z.array(formPageDefinitionSchema),
+    questions: z.array(questionDefinitionSchema),
+  });
 
 export const createFormOutputSchema = z.object({
   id: z.string().describe("Id of the created form"),

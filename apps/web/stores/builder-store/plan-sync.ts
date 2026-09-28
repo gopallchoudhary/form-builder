@@ -1,4 +1,4 @@
-import type { FormDefinition, QuestionDefinition } from "@repo/services/form/model";
+import type { BuilderQuestion, BuilderShape } from "./index";
 
 /**
  * The difference between two form definitions, expressed as the tRPC calls that would make
@@ -28,7 +28,7 @@ export type SyncOperation =
       formId: string;
       id: string;
       pageId: string | null;
-      question: Omit<QuestionDefinition, "id">;
+      question: Omit<BuilderQuestion, "id">;
     }
   | {
       type: "updateQuestion";
@@ -53,14 +53,14 @@ const SETTINGS_KEYS = [
   "thankYouTitle",
   "thankYouMessage",
   "thankYouRedirectUrl",
-] as const satisfies readonly (keyof FormDefinition)[];
+] as const satisfies readonly (keyof BuilderShape)[];
 
-const PAGE_KEYS = ["title", "description"] as const satisfies readonly (keyof FormDefinition["pages"][number])[];
+const PAGE_KEYS = ["title", "description"] as const satisfies readonly (keyof BuilderShape["pages"][number])[];
 
 /**
  * `position` is deliberately not diffed per row.
  *
- * It is part of `QuestionDefinition` because the store and the service both need it, but
+ * It is part of `BuilderQuestion` because the store and the service both need it, but
  * a drag is one intent: diffing positions would turn a single reorder into an update per
  * question *plus* the reorder. Order is carried by `reorderQuestions`, which takes the
  * whole ordered list and renumbers server-side. `createQuestion` still sends a position,
@@ -74,7 +74,7 @@ const QUESTION_KEYS = [
   "placeholder",
   "isRequired",
   "settings",
-] as const satisfies readonly (keyof QuestionDefinition)[];
+] as const satisfies readonly (keyof BuilderQuestion)[];
 
 /** `settings` is stored as jsonb, so equal JSON means "unchanged". */
 function sameJson(a: unknown, b: unknown): boolean {
@@ -120,33 +120,27 @@ const byPosition = (a: { position: string }, b: { position: string }) =>
   Number(a.position) - Number(b.position);
 
 /**
- * The order every page is meant to be in.
+ * The order of every group of questions, keyed by the page each belongs to.
  *
- * In `STEP` layout there are no pages, so its questions are ordered globally; in `PAGED`
- * they are ordered within their own page. Getting this wrong silently scrambles the
- * respondent's form, so the layout is taken from the *new* definition.
+ * Position is stored *within* a page, and the server's `reorderQuestions` scopes to a page
+ * for the same reason — an omitted `pageId` means "the questions with no page". So the
+ * grouping is by `pageId` in every layout, not by layout mode: branching on the layout
+ * here would send a page-scoped list to a form-scoped endpoint, which the server rejects
+ * with "must list every question in scope exactly once". A stepper form simply has one
+ * group per page it happens to be using, and a stepper whose questions all have no page has
+ * exactly one group.
  */
-function questionOrder(
-  definition: Pick<FormDefinition, "layoutMode" | "pages" | "questions">,
-): Map<string | null, string[]> {
+function questionOrder(definition: {
+  questions: BuilderQuestion[];
+}): Map<string | null, string[]> {
   const order = new Map<string | null, string[]>();
   const questions = [...definition.questions].sort(byPosition);
 
-  if (definition.layoutMode === "STEP") {
-    order.set(null, questions.map((question) => question.id));
-    return order;
+  for (const question of questions) {
+    const existing = order.get(question.pageId) ?? [];
+    existing.push(question.id);
+    order.set(question.pageId, existing);
   }
-
-  const pages = [...definition.pages].sort(byPosition);
-  for (const page of pages) {
-    order.set(
-      page.id,
-      questions.filter((question) => question.pageId === page.id).map((question) => question.id),
-    );
-  }
-  // Questions with no page still need an order, or a reorder of one page would drop them.
-  const orphans = questions.filter((question) => question.pageId === null);
-  if (orphans.length > 0) order.set(null, orphans.map((question) => question.id));
 
   return order;
 }
@@ -158,8 +152,8 @@ function questionOrder(
  * form that exists but has never been synced in this session.
  */
 export function planSync(
-  before: FormDefinition | null,
-  after: FormDefinition,
+  before: BuilderShape | null,
+  after: BuilderShape,
 ): SyncOperation[] {
   const operations: SyncOperation[] = [];
   const formId = after.id;
@@ -233,7 +227,7 @@ export function planSync(
         formId,
         id: question.id,
         pageId: question.pageId,
-        question: pick(question, QUESTION_KEYS) as Omit<QuestionDefinition, "id">,
+        question: pick(question, QUESTION_KEYS) as Omit<BuilderQuestion, "id">,
       });
       continue;
     }

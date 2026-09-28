@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type { FormDefinition, QuestionDefinition } from "@repo/services/form/model";
+import type { BuilderQuestion, BuilderShape } from "~/stores/builder-store";
 
 import { planSync } from "~/stores/builder-store/plan-sync";
 import { runSync, type SyncExecutor } from "~/stores/builder-store/run-sync";
 
-function question(overrides: Partial<QuestionDefinition> = {}): QuestionDefinition {
+function question(overrides: Partial<BuilderQuestion> = {}): BuilderQuestion {
   return {
     id: "q1",
     pageId: null,
@@ -20,7 +20,7 @@ function question(overrides: Partial<QuestionDefinition> = {}): QuestionDefiniti
   };
 }
 
-function definition(overrides: Partial<FormDefinition> = {}): FormDefinition {
+function definition(overrides: Partial<BuilderShape> = {}): BuilderShape {
   return {
     id: "form1",
     slug: "a-form",

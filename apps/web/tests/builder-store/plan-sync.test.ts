@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { FormDefinition, QuestionDefinition } from "@repo/services/form/model";
+import type { BuilderQuestion, BuilderShape } from "~/stores/builder-store";
 
 import { planSync } from "~/stores/builder-store/plan-sync";
 
-function question(overrides: Partial<QuestionDefinition> = {}): QuestionDefinition {
+function question(overrides: Partial<BuilderQuestion> = {}): BuilderQuestion {
   return {
     id: "q1",
     pageId: null,
@@ -19,7 +19,7 @@ function question(overrides: Partial<QuestionDefinition> = {}): QuestionDefiniti
   };
 }
 
-function definition(overrides: Partial<FormDefinition> = {}): FormDefinition {
+function definition(overrides: Partial<BuilderShape> = {}): BuilderShape {
   return {
     id: "form1",
     slug: "a-form",
@@ -73,8 +73,8 @@ describe("planSync", () => {
   });
 
   it("compares closesAt by value, not by reference", () => {
-    const before = definition({ closesAt: new Date("2026-01-01T00:00:00.000Z") });
-    const after = definition({ closesAt: new Date("2026-01-01T00:00:00.000Z") });
+    const before = definition({ closesAt: "2026-01-01T00:00:00.000Z" });
+    const after = definition({ closesAt: "2026-01-01T00:00:00.000Z" });
 
     expect(planSync(before, after)).toEqual([]);
   });
@@ -194,6 +194,73 @@ describe("planSync", () => {
         formId: "form1",
         pageId: null,
         questionIds: ["q3", "q1", "q2"],
+      },
+    ]);
+  });
+
+  it("groups questions by page, whatever the layout", () => {
+    // The server's `reorderQuestions` scopes to a page, and an omitted `pageId` there
+    // means "the questions with no page". Branching on the layout once sent a page-scoped
+    // list to that endpoint for a stepper form, and it rejected the request with "must
+    // list every question in scope exactly once". Questions sharing a page are one group,
+    // always.
+    const page = { id: "p1", title: null, description: null, position: "1.00" };
+    const before = definition({
+      layoutMode: "STEP",
+      pages: [page],
+      questions: [
+        question({ id: "q1", pageId: "p1", position: "1.00" }),
+        question({ id: "q2", pageId: "p1", position: "2.00" }),
+      ],
+    });
+    const after = definition({
+      layoutMode: "STEP",
+      pages: [page],
+      questions: [
+        question({ id: "q2", pageId: "p1", position: "1.00" }),
+        question({ id: "q1", pageId: "p1", position: "2.00" }),
+      ],
+    });
+
+    expect(planSync(before, after)).toEqual([
+      {
+        type: "reorderQuestions",
+        formId: "form1",
+        pageId: "p1",
+        questionIds: ["q2", "q1"],
+      },
+    ]);
+  });
+
+  it("keeps pageless and paged questions in separate groups", () => {
+    const page = { id: "p1", title: null, description: null, position: "1.00" };
+    const before = definition({
+      layoutMode: "PAGED",
+      pages: [page],
+      questions: [
+        question({ id: "q1", pageId: "p1", position: "1.00" }),
+        question({ id: "q2", pageId: null, position: "1.00" }),
+        question({ id: "q3", pageId: null, position: "2.00" }),
+      ],
+    });
+    const after = definition({
+      layoutMode: "PAGED",
+      pages: [page],
+      questions: [
+        question({ id: "q1", pageId: "p1", position: "1.00" }),
+        question({ id: "q3", pageId: null, position: "1.00" }),
+        question({ id: "q2", pageId: null, position: "2.00" }),
+      ],
+    });
+
+    // Only the pageless group changed, so only it is sent — and it is sent without a
+    // pageId, which is how the service is told to scope to the questions with no page.
+    expect(planSync(before, after)).toEqual([
+      {
+        type: "reorderQuestions",
+        formId: "form1",
+        pageId: null,
+        questionIds: ["q3", "q2"],
       },
     ]);
   });

@@ -433,25 +433,69 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 
 ## Phase 5 — Builder UI
 
-- [ ] Build tab — left canvas: pages as sections in `PAGED`, flat list in `STEP`;
-      questions as cards; **dnd-kit drag reorder** (deps and the grip icon are present, never wired)
-- [ ] Question inspector — label, helper text, placeholder, required toggle, kind picker
-- [ ] Kind-specific config controls driven by the `settings` union — options editor for choices,
-      scale + style + labels for rating, field toggles for address, min/max for number/date/length
-- [ ] Add / duplicate / delete question, with a real empty state
-- [ ] Settings tab — theme preset picker with live thumbnails, password on/off, max responses,
-      close date, one-per-device, show progress, back button, thank-you copy + redirect
-- [ ] Share tab — slug editor, copyable link, QR (client-side `qrcode`: inline SVG + PNG download),
-      publish state, live/published indicator
-- [ ] Preview tab — device-width toggle, theme-aware
-- [ ] Status chips for `DRAFT` / `PUBLISHED` / `CLOSED`, a password badge
-- [ ] Publish is gated on a valid form; the audience can never see a half-finished form
+- [x] Build section — canvas: pages as sections in `PAGED`, flat list in `STEP`;
+      **dnd-kit drag reorder**, pointer and keyboard sensors on the same handlers
+- [x] Question inspector — label, helper text, placeholder, required toggle, kind picker
+      grouped by category, so thirteen options are not one flat list
+- [x] Kind-specific config controls driven by the `settings` union — options editor for
+      choices, scale + style + labels for rating, field toggles for address, min/max for
+      number/date/length, allowed domains for email
+- [x] Add / duplicate / delete question, with a real empty state
+- [x] Settings section — theme preset picker with thumbnails drawn from the real tokens,
+      password on/off, max responses, close date, one-per-device, show progress, back button,
+      thank-you copy + redirect
+- [x] Share section — slug editor, copyable link, QR (client-side `qrcode`: inline SVG + PNG
+      download), publish state
+- [x] Preview section — device-width toggle, theme-aware, reading the store
+- [x] Status chips for `DRAFT` / `PUBLISHED` / `CLOSED`, a password badge, a live save
+      indicator
+- [x] Publish is gated on a valid form; the audience can never see a half-finished form
+- [x] `app/globals.css` re-themed from DESIGN.md. The app's chrome was stock shadcn
+      (near-black primary on white) while the *form* was already on-brand, so the product had
+      two visual languages. Two deliberate departures, both noted in the file: mute darkened
+      for legibility on sage, and an ink focus ring because a lime one is invisible on white
+
+### The canvas is the form
+
+Each card renders the **actual** `QuestionInput` the respondent gets, in the form's own
+theme — not a description of it. Two consequences: a question cannot be dragged into a
+state the renderer would not know how to display, and "what I see" cannot drift from "what
+they get". The controls are disabled and non-interactive on purpose; they share a surface
+with a drag handle, and a live field there is a click target that sometimes drags and
+sometimes focuses.
+
+### Bugs this phase found
+
+- [x] **`planSync` grouped questions by layout instead of by page.** The service's
+      `reorderQuestions` scopes to a page, and an omitted `pageId` there means "the
+      questions with no page". A stepper form whose questions sat on a page therefore sent a
+      page-scoped list to a form-scoped endpoint, which rejected it with *"must list every
+      question in scope exactly once"*. Found by replaying a real plan against a running API;
+      grouping is now by `pageId` in every layout, which is also simpler.
+- [x] **Switching to `PAGED` stranded the questions.** A stepper form's questions have no
+      page, so they would render on no page at all and publishing would refuse.
+      `setLayoutMode` now adopts them onto the first page. Switching to `STEP` deliberately
+      *keeps* the page structure, so switching back does not flatten the grouping.
+- [x] **The store claimed `Date` fields the API sends as strings.** The API has no date
+      serialiser. `BuilderDefinition` is now taken from the router's own output rather than
+      the service's `FormDefinition`, so the lie cannot be reintroduced.
 
 ### Gate
 
-- [ ] Create → build → autosave → publish → share all work
-- [ ] Keyboard reachable, visible focus, respects `prefers-reduced-motion`
-- [ ] Responsive to 375px
+- [x] Create → build → autosave → publish → share — verified against a running API by
+      replaying the real `planSync` + `runSync` with an HTTP executor
+      (`apps/web/scripts/autosave-smoke.ts`): 5 calls, every `local:` id replaced by the
+      server's, per-kind settings persisted, and a second plan came back empty so autosave
+      does not loop
+- [x] All six sections render, `/f/[slug]` serves the published form, no hydration or React
+      errors in the dev log
+- [x] Keyboard reachable — the drag grip is a real button with an `aria-label`, and dnd-kit's
+      `KeyboardSensor` drives the same handlers; every toggle is a real `Switch`/`Button`
+- [x] Visible focus — `--ring` is ink and the canvas grid collapses to one column below
+      `lg`, so the inspector stacks under the canvas
+- [ ] `prefers-reduced-motion` — the renderer's progress bar honours it; the builder's
+      remaining transitions are short and non-essential, and a full pass is the polish phase
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 269/269 · `pnpm build` 2/2
 
 ---
 

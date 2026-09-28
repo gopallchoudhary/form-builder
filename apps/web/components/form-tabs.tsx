@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3Icon,
+  EyeIcon,
   InboxIcon,
   LinkIcon,
   ListChecksIcon,
@@ -16,6 +17,7 @@ const TABS = [
   { segment: "build", label: "Build", icon: ListChecksIcon },
   { segment: "settings", label: "Settings", icon: Settings2Icon },
   { segment: "share", label: "Share", icon: LinkIcon },
+  { segment: "preview", label: "Preview", icon: EyeIcon },
   { segment: "responses", label: "Responses", icon: InboxIcon },
   { segment: "analytics", label: "Analytics", icon: BarChart3Icon },
 ] as const;

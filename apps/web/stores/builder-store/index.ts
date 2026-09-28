@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { useShallow } from "zustand/react/shallow";
-import type { FormDefinition, QuestionDefinition } from "@repo/services/form/model";
+import type { RouterOutputs } from "@repo/trpc/client";
 
 /**
  * The builder's copy of a form.
@@ -10,7 +10,35 @@ import type { FormDefinition, QuestionDefinition } from "@repo/services/form/mod
  * possible — a server round trip per edit would make the previous state unrecoverable.
  */
 
-export type BuilderTab = "build" | "settings" | "share" | "responses" | "analytics";
+/**
+ * Taken from the router rather than from the service's own `FormDefinition`, because the
+ * two genuinely differ: the API has no date serialiser, so a `Date` arrives as its ISO
+ * string. Typing the store with the service's shape would have had it claim `Date` fields
+ * that are strings at runtime, and the lie would surface as a `new Date(undefined)` the
+ * first time someone edited a close date.
+ */
+export type BuilderDefinition = RouterOutputs["form"]["getForm"];
+
+/**
+ * `settings` is required here, though the router's type has it optional — `z.unknown()`
+ * infers an optional key. The store always holds an object, because a question with no
+ * settings is stored as `{}` rather than absent, and every settings editor reads it.
+ */
+export type BuilderQuestion = Omit<BuilderDefinition["questions"][number], "settings"> & {
+  settings: unknown;
+};
+
+/**
+ * A definition as the *store* holds it, which is not quite what the router returns: a
+ * question always has a `settings` object here, even when the creator has configured
+ * nothing. Every settings editor reads it unguarded, so normalising it once here is what
+ * keeps `settings ?? {}` out of a dozen call sites.
+ */
+export interface BuilderShape extends Omit<BuilderDefinition, "questions"> {
+  questions: BuilderQuestion[];
+}
+
+export type BuilderTab = "build" | "settings" | "share" | "preview" | "responses" | "analytics";
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -18,26 +46,42 @@ export type SaveState = "idle" | "saving" | "saved" | "error";
 export const isLocalId = (id: string): boolean => id.startsWith("local:");
 
 export interface BuilderState {
-  definition: FormDefinition | null;
+  definition: BuilderShape | null;
   /** The definition as last known to be on the server, i.e. the autosave baseline. */
-  baseline: FormDefinition | null;
+  baseline: BuilderShape | null;
   selectedQuestionId: string | null;
   activeTab: BuilderTab;
   saveState: SaveState;
-  past: FormDefinition[];
-  future: FormDefinition[];
+  past: BuilderShape[];
+  future: BuilderShape[];
 
-  hydrate: (definition: FormDefinition) => void;
+  /**
+   * Takes the router's shape and normalises it, so `settings` is guaranteed present
+   * everywhere downstream. This is the one place the two shapes meet.
+   */
+  hydrate: (definition: BuilderDefinition) => void;
   setTab: (tab: BuilderTab) => void;
   selectQuestion: (questionId: string | null) => void;
   markSaving: () => void;
-  markSaved: (definition: FormDefinition) => void;
+  markSaved: (definition: BuilderShape) => void;
   markSaveError: () => void;
 
-  updateSettings: (patch: Partial<FormDefinition>) => void;
-  renameQuestion: (questionId: string, patch: Partial<QuestionDefinition>) => void;
+  /**
+   * Switches the layout, and reconciles the questions with it.
+   *
+   * Going to `PAGED` is the direction that needs work: a stepper form's questions have no
+   * page, so they would render on no page at all and publishing would refuse. They are
+   * adopted onto the first page.
+   *
+   * Going to `STEP` deliberately keeps the page structure. The stepper view ignores pages,
+   * so nothing is lost, and switching back restores the creator's grouping instead of
+   * dumping everything onto page one.
+   */
+  setLayoutMode: (mode: "STEP" | "PAGED") => void;
+  updateSettings: (patch: Partial<BuilderShape>) => void;
+  renameQuestion: (questionId: string, patch: Partial<BuilderQuestion>) => void;
   setQuestionOrder: (pageId: string | null, questionIds: string[]) => void;
-  addQuestion: (question: Omit<QuestionDefinition, "id"> & { id?: string }) => string;
+  addQuestion: (question: Omit<BuilderQuestion, "id"> & { id?: string }) => string;
   removeQuestion: (questionId: string) => void;
   addPage: () => void;
   updatePage: (pageId: string, patch: { title?: string | null; description?: string | null }) => void;
@@ -49,6 +93,9 @@ export interface BuilderState {
 }
 
 const HISTORY_LIMIT = 50;
+
+const byPosition = (a: { position: string }, b: { position: string }) =>
+  Number(a.position) - Number(b.position);
 
 /** A position that sorts after every existing one in the same group. */
 function nextPosition(
@@ -67,7 +114,7 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
    * impossible to forget. `commit` pushes the current definition onto the undo stack and
    * clears the redo stack, which is the standard behaviour for a linear history.
    */
-  const commit = (update: (definition: FormDefinition) => FormDefinition) => {
+  const commit = (update: (definition: BuilderShape) => BuilderShape) => {
     const { definition, past } = get();
     if (!definition) return;
 
@@ -90,17 +137,26 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
     past: [],
     future: [],
 
-    hydrate: (definition) =>
+    hydrate: (definition) => {
+      const normalised: BuilderShape = {
+        ...definition,
+        questions: definition.questions.map((question) => ({
+          ...question,
+          settings: question.settings ?? {},
+        })),
+      };
+
       set({
-        definition,
+        definition: normalised,
         // The fetched definition *is* the persisted state, so it starts as the baseline:
         // autosave then has nothing to send until something actually changes.
-        baseline: definition,
+        baseline: normalised,
         selectedQuestionId: null,
         saveState: "idle",
         past: [],
         future: [],
-      }),
+      });
+    },
 
     setTab: (activeTab) => set({ activeTab }),
     selectQuestion: (selectedQuestionId) => set({ selectedQuestionId }),
@@ -108,6 +164,38 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
     markSaving: () => set({ saveState: "saving" }),
     markSaved: (definition) => set({ saveState: "saved", baseline: definition }),
     markSaveError: () => set({ saveState: "error" }),
+
+    setLayoutMode: (mode) =>
+      commit((definition) => {
+        if (definition.layoutMode === mode) return definition;
+
+        if (mode === "STEP") {
+          return { ...definition, layoutMode: "STEP" };
+        }
+
+        const pages =
+          definition.pages.length > 0
+            ? definition.pages
+            : [
+                {
+                  id: `local:${crypto.randomUUID()}`,
+                  title: null,
+                  description: null,
+                  position: "1.00",
+                },
+              ];
+
+        const firstPageId = [...pages].sort(byPosition)[0]?.id ?? null;
+
+        return {
+          ...definition,
+          layoutMode: "PAGED",
+          pages,
+          questions: definition.questions.map((question) =>
+            question.pageId ? question : { ...question, pageId: firstPageId },
+          ),
+        };
+      }),
 
     updateSettings: (patch) =>
       commit((definition) => ({ ...definition, ...patch })),
@@ -152,7 +240,7 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
       // A local id lets the builder render and autosave the new question immediately; the
       // server replaces it with a real one once the create call returns.
       const id = question.id ?? `local:${crypto.randomUUID()}`;
-      const full: QuestionDefinition = { ...question, id };
+      const full: BuilderQuestion = { ...question, id };
 
       commit((definition) => ({
         ...definition,

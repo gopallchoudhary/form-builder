@@ -1,5 +1,5 @@
 import type { RouterInputs } from "@repo/trpc/client";
-import type { FormDefinition, QuestionDefinition } from "@repo/services/form/model";
+import type { BuilderQuestion, BuilderShape } from "./index";
 
 import type { SyncOperation } from "./plan-sync";
 
@@ -38,17 +38,17 @@ export interface SyncResult {
   /** Local id to server id, for everything created by this plan. */
   idMap: Map<string, string>;
   /** The definition with every local id replaced, which becomes the new baseline. */
-  definition: FormDefinition;
+  definition: BuilderShape;
 }
 
-function applyIdMap(definition: FormDefinition, idMap: Map<string, string>): FormDefinition {
+function applyIdMap(definition: BuilderShape, idMap: Map<string, string>): BuilderShape {
   const resolve = (id: string) => idMap.get(id) ?? id;
 
   return {
     ...definition,
     pages: definition.pages.map((page) => ({ ...page, id: resolve(page.id) })),
     questions: definition.questions.map((question) => {
-      const resolved: QuestionDefinition = { ...question, id: resolve(question.id) };
+      const resolved: BuilderQuestion = { ...question, id: resolve(question.id) };
       if (question.pageId) resolved.pageId = resolve(question.pageId);
       return resolved;
     }),
@@ -56,7 +56,7 @@ function applyIdMap(definition: FormDefinition, idMap: Map<string, string>): For
 }
 
 export async function runSync(
-  definition: FormDefinition,
+  definition: BuilderShape,
   operations: SyncOperation[],
   executor: SyncExecutor,
 ): Promise<SyncResult> {
