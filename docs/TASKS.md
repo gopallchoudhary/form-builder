@@ -559,19 +559,47 @@ disagree about what a valid email is. It only decides *when* to complain.
 
 ## Phase 7 — Responses + export
 
-- [ ] Response table (`data-table`, `canvas-soft` header per `ex-data-table-cell`,
-      mono-caps eyebrow headers)
-- [ ] Per-question answer rendering including address objects and multi-select arrays
-- [ ] Filters (date range, completeness) + pagination
-- [ ] CSV export straight from `form_sessions` + `form_answers`
-- [ ] Delete a single response
+- [x] Response table — one column per question, `ex-data-table-cell` chrome: `canvas-soft`
+      header, mono-caps eyebrow columns, `body-sm` cells, `canvas-soft` row borders
+- [x] Per-question answer rendering, including address objects (stacked, with readable field
+      labels) and multi-select arrays (as pills)
+- [x] Filters — completeness, a from/until date range, and a search over answers — plus
+      pagination that reports the total across all pages, not the size of the current one
+- [x] CSV export straight from `form_sessions` + `form_answers`
+- [x] Delete a single response, behind a confirm dialog that only closes once the delete has
+      actually succeeded
+
+### The export is the record, not a screenshot of the form
+
+Two requirements pull in opposite directions, and the export has to satisfy both:
+
+- a question **nobody has answered** still belongs in the file, or its shape would depend on
+  who has replied and a form with no responses would export no question columns at all;
+- a question the creator has since **deleted** must keep its column and every value in it,
+  because the answers are the record and the question is only the question.
+
+So the columns are the union of the live questions and every question that still has a
+recorded answer. A deleted question is headed by the label **denormalised onto its answers**,
+which is the only label those responses were ever collected under. Renaming a live question
+moves its header, because the creator asked for that and the values are unchanged.
+
+Choice ids are also resolved to the labels respondents saw, so a multi-select exports
+`The API; The UI` rather than `api; ui`; an id with no matching option is left as itself,
+which is the honest rendering for a question edited since. The same lookup happens in the
+table's cells, so the two agree.
 
 ### Gate
 
-- [ ] An exported CSV survives a question being renamed or deleted, because the label is
-      denormalised onto each answer
-
----
+- [x] An exported CSV survives a question being renamed and deleted — asserted directly in
+      `packages/services/tests/analytics.test.ts`, and again end to end against a running API
+      (`apps/web/scripts/responses-smoke.ts`, 19 assertions covering every answer kind, the
+      filters, the pagination totals, the delete and the export)
+- [x] A response of every one of the eight kinds round-trips through the table's query and
+      the export
+- [x] Deleting a response is reflected in the list *and* in the analytics totals
+- [x] `pnpm lint` 6/6 · `pnpm check-types` 6/6 · `pnpm test` 294/294 · `pnpm build` 2/2
+- [ ] The page is client-rendered, so its DOM is not verified by an HTTP fetch — the data
+      contract behind it is, and the styling is worth a look in a browser
 
 ## Phase 8 — Analytics
 

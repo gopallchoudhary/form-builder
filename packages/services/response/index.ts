@@ -133,15 +133,6 @@ class ResponseService {
 
     await assertFormOwnership(formId, userId, this.db);
 
-    // Columns come from the form's questions, not from the answers — otherwise an
-    // export with no responses would have no question columns at all, and one with
-    // partial responses would have a different column set depending on who answered.
-    const questions = await this.db
-      .select({ id: questionsTable.id, label: questionsTable.label, labelKey: questionsTable.labelKey })
-      .from(questionsTable)
-      .where(and(eq(questionsTable.formId, formId), isNull(questionsTable.deletedAt)))
-      .orderBy(asc(questionsTable.position));
-
     const sessions = await this.db
       .select({
         sessionId: formSessionsTable.id,
@@ -154,6 +145,62 @@ class ResponseService {
       .orderBy(asc(formSessionsTable.startedAt));
 
     const answersBySession = await this.answersFor(sessions.map((session) => session.sessionId));
+    const allAnswers = [...answersBySession.values()].flat();
+
+    /*
+     * Columns are the live questions *plus* every question that still has a recorded answer.
+     *
+     * Both halves are load-bearing. From the questions alone: a question nobody has answered
+     * still belongs in the export, and a form with no responses at all would export no
+     * question columns whatsoever. From the answers alone: a question the creator has since
+     * deleted would take its entire column — and every value in it — out of the export, which
+     * is the one thing a spreadsheet of collected responses must never do.
+     *
+     * A deleted question is headed by the label denormalised onto its answers, because that is
+     * the only label those responses were ever collected under. Renaming a live question moves
+     * its header, because the creator asked for that and the values are unchanged.
+     */
+    const live = await this.db
+      .select({
+        id: questionsTable.id,
+        label: questionsTable.label,
+        labelKey: questionsTable.labelKey,
+        settings: questionsTable.settings,
+      })
+      .from(questionsTable)
+      .where(and(eq(questionsTable.formId, formId), isNull(questionsTable.deletedAt)))
+      .orderBy(asc(questionsTable.position));
+
+    // Choice ids to the labels the respondents saw, for the cells below.
+    const optionLabels = new Map<string, string>();
+    for (const question of live) {
+      const options = (question.settings as { options?: unknown } | null)?.options;
+      if (!Array.isArray(options)) continue;
+      for (const option of options as Array<{ id?: unknown; label?: unknown }>) {
+        if (typeof option.id === "string" && typeof option.label === "string") {
+          optionLabels.set(option.id, option.label);
+        }
+      }
+    }
+
+    const columns: Array<{ id: string; label: string }> = live.map((question) => ({
+      id: question.id,
+      label: question.label,
+    }));
+
+    const liveIds = new Set(live.map((question) => question.id));
+    const orphans = new Map<string, string>();
+
+    for (const answer of allAnswers) {
+      if (liveIds.has(answer.questionId) || orphans.has(answer.questionId)) continue;
+      orphans.set(answer.questionId, answer.questionLabel ?? answer.questionLabelKey ?? "Deleted question");
+    }
+
+    // Appended after the live questions, sorted by the label they were recorded under, so the
+    // order of a re-imported file does not shuffle between exports.
+    for (const [id, label] of [...orphans.entries()].sort((a, b) => a[1].localeCompare(b[1]))) {
+      columns.push({ id, label });
+    }
 
     const header = [
       "Response",
@@ -161,14 +208,14 @@ class ResponseService {
       "Started at",
       "Completed at",
       "Duration (seconds)",
-      ...questions.map((question) => question.label),
+      ...columns.map((column) => column.label),
     ];
 
     const rows = sessions.map((session) => {
       const byQuestion = new Map(
         (answersBySession.get(session.sessionId) ?? []).map((answer) => [
           answer.questionId,
-          stringifyAnswer(answer),
+          stringifyAnswer(answer, optionLabels),
         ]),
       );
 
@@ -178,7 +225,7 @@ class ResponseService {
         session.startedAt.toISOString(),
         session.completedAt?.toISOString() ?? "",
         durationInSeconds(session.startedAt, session.completedAt)?.toString() ?? "",
-        ...questions.map((question) => byQuestion.get(question.id) ?? ""),
+        ...columns.map((column) => byQuestion.get(column.id) ?? ""),
       ];
     });
 
@@ -221,19 +268,52 @@ function durationInSeconds(startedAt: Date, completedAt: Date | null): number | 
   return Math.max(0, Math.round((completedAt.getTime() - startedAt.getTime()) / 1000));
 }
 
-function stringifyAnswer(answer: ResponseAnswer): string {
+/**
+ * Human labels for the address fields, so an exported cell reads "City: London" rather than
+ * `city: London`. The raw keys are what the JSON holds; they are not what a person means.
+ */
+const ADDRESS_FIELD_LABELS: Record<string, string> = {
+  line1: "Address",
+  line2: "Apartment, suite",
+  city: "City",
+  state: "State",
+  postalCode: "Postal code",
+  country: "Country",
+};
+
+/**
+ * Render one answer as a spreadsheet cell.
+ *
+ * `optionLabels` maps a choice's stored id to the label the respondent actually saw. Only the
+ * ids were recorded, so without this a multi-select exports as `api; ui` — which is the
+ * database's vocabulary, not the form's. An id with no matching option is left as itself,
+ * which is the honest rendering for a question the creator has since edited.
+ */
+function stringifyAnswer(
+  answer: ResponseAnswer,
+  optionLabels: Map<string, string> = new Map(),
+): string {
   if (answer.valueText !== null) return answer.valueText;
   if (answer.valueNumber !== null) return formatNumericAnswer(answer.valueNumber) ?? answer.valueNumber;
   if (answer.valueDate !== null) return answer.valueDate;
+
   if (answer.valueJson !== null && answer.valueJson !== undefined) {
-    if (Array.isArray(answer.valueJson)) return answer.valueJson.join("; ");
-    if (typeof answer.valueJson === "object") {
-      return Object.entries(answer.valueJson as Record<string, unknown>)
-        .map(([key, value]) => `${key}: ${String(value)}`)
+    if (Array.isArray(answer.valueJson)) {
+      return answer.valueJson
+        .map(String)
+        .map((id) => optionLabels.get(id) ?? id)
         .join("; ");
     }
+
+    if (typeof answer.valueJson === "object") {
+      return Object.entries(answer.valueJson as Record<string, unknown>)
+        .map(([key, value]) => `${ADDRESS_FIELD_LABELS[key] ?? key}: ${String(value)}`)
+        .join("; ");
+    }
+
     return String(answer.valueJson);
   }
+
   return "";
 }
 

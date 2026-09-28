@@ -74,6 +74,76 @@ describe.skipIf(!servicesAvailable)("responses and analytics", () => {
   }
 
   describe("responses", () => {
+    it("keeps a deleted question's answers in the export, under the label they were collected with", async () => {
+      /*
+       * The gate for this phase. A spreadsheet of collected responses must not lose a column
+       * because somebody tidied up the form afterwards — the answers are the record, and the
+       * question is only the question.
+       */
+      const { id: formId, slug } = await harness.forms.createForm(owner.id, { title: "Export" });
+      const { id: nameId } = await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "SHORT_TEXT",
+        label: "Name",
+      });
+      const { id: ratingId } = await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "RATING",
+        label: "How were we?",
+        settings: { scale: 5, style: "STAR" },
+      });
+      await harness.forms.setStatus(owner.id, { formId, status: "PUBLISHED" });
+
+      const session = await access.startSession({ slug, deviceId: device(1) });
+      await access.submit({
+        sessionId: session.sessionId,
+        deviceId: device(1),
+        answers: [
+          { questionId: nameId, value: "Gopal" },
+          { questionId: ratingId, value: 4 },
+        ],
+      });
+
+      // The creator renames one question and deletes the other.
+      await harness.questions.updateQuestion(owner.id, { questionId: nameId, label: "Full name" });
+      await harness.questions.deleteQuestion(owner.id, { questionId: ratingId });
+
+      const csv = await responses.exportCsv(owner.id, { formId });
+      const [header, row] = csv.split("\r\n");
+
+      // The deleted question keeps its column, headed by the label the answer was recorded
+      // under — the only label that answer ever had.
+      expect(header).toContain("How were we?");
+      expect(header).not.toContain("Name");
+      // The renamed question's header follows the rename, and its value is untouched.
+      expect(header).toContain("Full name");
+      expect(row).toContain("Gopal");
+      expect(row).toContain("4");
+    });
+
+    it("exports a column for a question nobody has answered", async () => {
+      // The other half of the same rule: a question with no answers still belongs in the
+      // export, or the file's shape depends on who has replied.
+      const { id: formId } = await harness.forms.createForm(owner.id, { title: "Unanswered" });
+      await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "SHORT_TEXT",
+        label: "Name",
+      });
+      await harness.questions.createQuestion(owner.id, {
+        formId,
+        kind: "SHORT_TEXT",
+        label: "Company",
+      });
+      await harness.forms.setStatus(owner.id, { formId, status: "PUBLISHED" });
+
+      const csv = await responses.exportCsv(owner.id, { formId });
+      const header = csv.split("\r\n")[0] ?? "";
+
+      expect(header).toContain("Name");
+      expect(header).toContain("Company");
+    });
+
     it("lists completed responses with their answers and duration", async () => {
       const form = await seedForm();
       await submit(form, 1, "Gopal", 5);
