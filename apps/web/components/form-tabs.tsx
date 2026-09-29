@@ -4,9 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
-  BarChart3Icon,
   EyeIcon,
-  InboxIcon,
   LinkIcon,
   ListChecksIcon,
   Settings2Icon,
@@ -14,13 +12,20 @@ import {
 
 import { cn } from "~/lib/utils";
 
+/*
+ * The four things you do *to* a form.
+ *
+ * Responses and analytics used to be here too, and left. Reading what came in is not an
+ * operation on the form — it is something you do across all of them — so they are sections in
+ * the sidebar with a form picker, at `/responses` and `/analytics`. The builder keeps a link
+ * to both, so the one-step path from "I have just published" to "has anyone filled it in"
+ * survives.
+ */
 const TABS = [
   { segment: "build", label: "Build", icon: ListChecksIcon },
   { segment: "settings", label: "Settings", icon: Settings2Icon },
   { segment: "share", label: "Share", icon: LinkIcon },
   { segment: "preview", label: "Preview", icon: EyeIcon },
-  { segment: "responses", label: "Responses", icon: InboxIcon },
-  { segment: "analytics", label: "Analytics", icon: BarChart3Icon },
 ] as const;
 
 /**

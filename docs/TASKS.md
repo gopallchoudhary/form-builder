@@ -343,8 +343,8 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 - [x] `/forms/[formId]/build` — builder
 - [x] `/forms/[formId]/settings`
 - [x] `/forms/[formId]/share`
-- [x] `/forms/[formId]/responses`
-- [x] `/forms/[formId]/analytics`
+- [x] `/responses?form=<id>` — responses table, filters, pagination, CSV, delete
+- [x] `/analytics?form=<id>` — per-form KPIs, trend, funnel, drop-off, distributions, timing
 - [x] The console layout lives in `app/(console)/layout.tsx`, so `/dashboard` and `/forms` are
       siblings in the URL and share one auth guard. They used to be nested, which meant
       `/dashboard` was a prefix of every other console route and the sidebar lit up every
@@ -352,10 +352,34 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 - [x] The dashboard lists no forms. It showed a second copy of the `/forms` list as a table,
       and two pages listing the same things in different shapes is one more than a person can
       be reminded of
+- [x] **Responses and analytics left the form tabs and became sections.** Reading what came in
+      is not an operation *on* a form — it is something you do across all of them — so the form
+      became a filter rather than the address, and the sections sit beside Dashboard and Forms
+      in the sidebar. Two consequences worth keeping:
+  - The form travels in `?form=`, so `/responses` is a real page with nothing chosen, the
+      sidebar link never points at nothing, and a link to one form's responses is shareable
+  - **The builder store is now read only by the builder.** Responses took its question columns
+      from the store and `AnswerDistributions` took its chartable questions, which meant a
+        read-only table and a read-only chart were hydrating a store whose entire purpose is
+        holding edits the server has not seen. Both now take a `useGetForm` query instead, and
+        the invariant is worth defending: the store is for unsaved work, so a page that cannot
+        save anything has no business reading it
+- [x] The builder keeps a `Responses` / `Analytics` link pair carrying the form in the query,
+      so "I have just published — has anyone filled it in?" stays one click
+- [x] Analytics is per-form and the dashboard is across all of them, deliberately. They answer
+      different questions, and the summed totals only exist in one place
+- [x] No form in the URL resolves to the most recently updated form, and the choice is written
+      back so the view is shareable. An empty page behind a sidebar link is a worse answer than
+      a plausible one
+- [x] Drafts appear in the picker. A draft cannot collect responses, so "zero responses" is the
+      honest answer; hiding them leaves a new creator with a single draft and an empty picker
 - [x] `/f/[slug]` — public form, definition fetched on the server
 - [x] `/f/[slug]/thanks`
-- [x] `components/form-tabs.tsx` — the five form sections, mounted by each of those pages so
-      a new tab is one entry plus one page
+- [x] `components/form-tabs.tsx` — the four things you do *to* a form, mounted by each of those
+      pages so a new tab is one entry plus one page
+- [x] `components/console/form-picker.tsx` — one picker, two sections. It owns the rule that no
+      form in the URL means the most recently updated one, which is why both pages behave
+      identically for free
 
 ### Auth gating
 

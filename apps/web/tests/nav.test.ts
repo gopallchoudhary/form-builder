@@ -10,7 +10,7 @@ import { isNavItemActive } from "~/lib/nav";
  * the rule itself is what has to be right.
  */
 
-const NAV = ["/dashboard", "/forms"] as const;
+  const NAV = ["/dashboard", "/forms", "/responses", "/analytics"] as const;
 
 const active = (pathname: string, urls: readonly string[] = NAV) =>
   urls.filter((url) => isNavItemActive(pathname, urls, url));
@@ -55,5 +55,26 @@ describe("isNavItemActive", () => {
   it("lights nothing for a route it does not own", () => {
     expect(active("/login")).toEqual([]);
     expect(active("/")).toEqual([]);
+  });
+
+  it("gives each section its own entry, with the form in the query", () => {
+    // `/responses` and `/analytics` carry the form in `?form=`, not in the path, so these are
+    // exact matches and neither can steal the other's highlight.
+    expect(active("/responses")).toEqual(["/responses"]);
+    expect(active("/analytics")).toEqual(["/analytics"]);
+
+    /*
+     * A nested path under one of them still lights it.
+     *
+     * This is the one case the rule has to get right without help: there is no descendant
+     * entry to defer to, so the section keeps the highlight. Today nothing nests under
+     * `/responses`, but `/responses/<id>` is the obvious next shape and a section that went
+     * dark the moment it gained a sub-page would be a nasty surprise.
+     */
+    expect(active("/responses/anything")).toEqual(["/responses"]);
+    expect(active("/analytics/anything/deeper")).toEqual(["/analytics"]);
+
+    // A near-miss sibling shares a prefix but is a different route.
+    expect(active("/responses-archive")).toEqual([]);
   });
 });

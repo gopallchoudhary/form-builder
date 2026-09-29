@@ -100,10 +100,12 @@ test.describe("the product, end to end", () => {
     await expect(form.getByRole("heading", { name: /thank you/i })).toBeVisible();
 
     // The outcome: the response is in the creator's table, and the count has moved.
-    await page.goto(`/forms/${formId}/responses`);
+    // Responses and Analytics are sections with a form picker, so the form travels in the
+    // query string rather than the path.
+    await page.goto(`/responses?form=${formId}`);
     await expect(page.getByRole("cell", { name: "Priya" })).toBeVisible();
 
-    await page.goto(`/forms/${formId}/analytics`);
+    await page.goto(`/analytics?form=${formId}`);
     const kpi = page.getByRole("region", { name: "Summary" });
     await expect(kpi.getByText("Responses")).toBeVisible();
 

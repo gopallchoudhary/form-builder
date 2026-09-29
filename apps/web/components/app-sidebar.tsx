@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconForms, IconLayoutDashboard, IconLogout, type Icon } from "@tabler/icons-react";
+import {
+  IconChartBar,
+  IconForms,
+  IconInbox,
+  IconLayoutDashboard,
+  IconLogout,
+  type Icon,
+} from "@tabler/icons-react";
 
 import {
   Sidebar,
@@ -27,6 +34,10 @@ import { cn } from "~/lib/utils";
  * pointing at `#` — "Active Proposals", "Archived", "Get Help" — which is worse than no
  * navigation: it advertises features that do not exist and teaches people that dead links
  * are normal here.
+ *
+ * Four sections, in the order they are actually worked in. Responses and Analytics take a
+ * form in `?form=`, so these two links land on a real page whether or not a form was chosen
+ * — which is also why they can sit beside Dashboard rather than inside a form's tabs.
  */
 
 interface NavItem {
@@ -38,6 +49,8 @@ interface NavItem {
 const NAV_MAIN: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: IconLayoutDashboard },
   { title: "Forms", url: "/forms", icon: IconForms },
+  { title: "Responses", url: "/responses", icon: IconInbox },
+  { title: "Analytics", url: "/analytics", icon: IconChartBar },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

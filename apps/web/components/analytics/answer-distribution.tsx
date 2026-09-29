@@ -21,15 +21,18 @@ import {
 import { Skeleton } from "~/components/ui/skeleton";
 import { useGetAnswerDistribution } from "~/hooks/api/analytics";
 import { cn } from "~/lib/utils";
-import { useBuilderStore } from "~/stores/builder-store";
 
 /**
  * How people answered one question.
  *
  * The mark depends on the shape of the answer rather than on taste: a two-way question is a
- * donut because "yes" and "no" are parts of a whole, and a five-option question is bars
+ * donut because "yes" and "no" are parts of a whole, and a five-option question gets bars
  * because its options are not parts of anything. Forcing a donut onto a rating scale would
  * imply five shares of one thing.
+ *
+ * The form and its questions arrive as props. This used to read them from the builder store,
+ * which meant the page had to hydrate a store built for holding unsaved edits just to draw a
+ * read-only chart. Passing them in is why the store is now read only by the builder.
  */
 
 const config = {
@@ -46,10 +49,19 @@ const SLICES = [
   "var(--chart-2)",
 ];
 
-export function AnswerDistributions() {
-  const formId = useBuilderStore((state) => state.definition?.id ?? null);
-  const questions = useBuilderStore((state) => state.definition?.questions ?? []);
+export interface DistributableQuestion {
+  id: string;
+  kind: string;
+  label: string;
+}
 
+export function AnswerDistributions({
+  formId,
+  questions,
+}: {
+  formId: string | null;
+  questions: DistributableQuestion[];
+}) {
   // Only the kinds whose answers are worth a chart. A free-text field has no distribution.
   const chartable = questions.filter(
     (question) =>

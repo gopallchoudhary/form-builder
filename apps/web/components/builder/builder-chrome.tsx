@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CheckIcon,
@@ -165,6 +166,26 @@ export function BuilderChrome({
         </div>
 
         <StatusChip status={definition.status} />
+
+        {/*
+          The way out to the two sections, with the form already chosen.
+
+          They are not tabs any more, so without this a creator who has just published would
+          have to leave the form, find the section, and pick the form again to ask the
+          obvious next question.
+
+          Named "View …" rather than repeating the section's own name: the sidebar carries a
+          link called "Responses" on this very page, and two links with the same label to the
+          same place tell a screen-reader user nothing about which is which.
+        */}
+        <div className="flex items-center gap-1">
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+            <Link href={`/responses?form=${formId}`}>View responses</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+            <Link href={`/analytics?form=${formId}`}>View analytics</Link>
+          </Button>
+        </div>
 
         {isLive ? (
           <Button
