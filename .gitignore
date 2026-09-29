@@ -49,3 +49,5 @@ yarn-error.log*
 /apps/web/test-results/
 /apps/web/playwright-report/
 /apps/web/.playwright-artifacts/
+# The browser tests' own Next build directory, so they can run beside a live `next dev`.
+/apps/web/.next-e2e/

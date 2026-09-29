@@ -1,7 +1,14 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": ["SKIP_ENV_VALIDATION", "DATABASE_URL", "DATABASE_URL_TEST", "API_URL", "CI"],
+  "globalEnv": [
+    "SKIP_ENV_VALIDATION",
+    "DATABASE_URL",
+    "DATABASE_URL_TEST",
+    "API_URL",
+    "CI",
+    "NEXT_DIST_DIR"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

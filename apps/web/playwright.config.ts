@@ -61,6 +61,9 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         PORT: String(WEB_PORT),
+        // Its own build directory, so this dev server does not contend for the lock with a
+        // developer's `pnpm dev` and the suite can run without stopping it.
+        NEXT_DIST_DIR: ".next-e2e",
         // The browser talks to the API through `NEXT_PUBLIC_API_URL` and the server
         // components through `API_URL`; both have to point at *this run's* API, not at
         // whatever a developer happens to have on 8000.

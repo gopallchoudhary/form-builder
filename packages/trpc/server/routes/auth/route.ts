@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { userService } from "../../services";
 import { authenticatedProcedure, publicProcedure, router } from "../../trpc";
 import { generatePath } from "../../utils/path-generator";
@@ -74,7 +72,18 @@ export const authRouter = router({
       protect: false,
       },
     })
-    .input(z.undefined())
+    /*
+     * No input parser, deliberately — and not an oversight to be tidied up later.
+     *
+     * This used to declare `.input(z.undefined())`, which made the procedure impossible to
+     * call over tRPC: `httpLink` sends no body for a void mutation, tRPC parses an absent
+     * body as `{}`, and zod refuses an object where `undefined` was demanded. Every sign-out
+     * from the app was a 400 and a session that would not end.
+     *
+     * The REST route went on working, which is why the tests missed it: they only ever
+     * posted to `/api/authentication/signOutUser`. A procedure with no input parser accepts
+     * both an empty body and `{}`, so the two transports now agree.
+     */
     .output(signOutUserOutputModel)
     .mutation(async ({ ctx }) => {
       clearAuthenticationCookie(ctx);

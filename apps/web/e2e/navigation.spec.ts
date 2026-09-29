@@ -46,3 +46,32 @@ test("the sidebar highlights the section you are in, and only that one", async (
   await expect(active).toHaveCount(1);
   await expect(active).toContainText("Forms");
 });
+
+/**
+ * Signing out, in a browser, over the transport the app uses.
+ *
+ * This procedure once declared an input of `z.undefined()`, which is uncallable over tRPC:
+ * `httpLink` sends no body for a void mutation, tRPC reads an absent body as `{}`, and the
+ * sign-out answered 400 — the cookie stayed and the session never ended. The API tests
+ * missed it because they only ever posted to the REST route, which had kept working the
+ * whole time. A test that drives the real transport is the only thing that would have
+ * caught it, so there is one now.
+ */
+test("signing out ends the session", async ({ page }) => {
+  const unique = `${Date.now()}-so`;
+
+  await page.goto("/signup");
+  await page.getByLabel("Full name").fill("Sign Out Creator");
+  await page.getByLabel("Email").fill(`so-${unique}@example.com`);
+  await page.getByLabel("Password", { exact: true }).fill("a-very-long-password");
+  await page.getByLabel("Confirm password").fill("a-very-long-password");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.waitForURL(/\/dashboard/);
+
+  await page.getByRole("button", { name: /^sign out$/i }).click();
+  await page.waitForURL(/\/login$/);
+
+  // Not just a redirect: the cookie is gone, so a protected route sends them back.
+  await page.goto("/forms");
+  await expect(page).toHaveURL(/\/login$/);
+});

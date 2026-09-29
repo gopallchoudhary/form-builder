@@ -208,6 +208,30 @@ describe.skipIf(!available)("the HTTP API", () => {
       expect(cookie).toContain("authentication-token=");
       expect(cookie).toMatch(/Max-Age=0|Expires=Thu, 01 Jan 1970/);
     });
+
+    /*
+     * The same sign-out over tRPC, which is the transport the web app actually uses.
+     *
+     * It was the only path that was broken, and nothing here noticed for a long time:
+     * every other request in this file goes to `/api/...`, so a procedure that answered
+     * REST perfectly while being uncallable over tRPC looked healthy. `httpLink` sends no
+     * body for a mutation with no input, so that is what this sends — the empty body is
+     * the whole regression.
+     */
+    it("clears the cookie on sign out over tRPC, with no request body", async () => {
+      const user = await signUp();
+
+      const response = await request(app as never)
+        .post("/trpc/auth.signOutUser")
+        .set(auth(user.cookie))
+        .set("content-type", "application/json")
+        .send("");
+
+      expect(response.status).toBe(200);
+      const cookie = response.headers["set-cookie"]?.[0] ?? "";
+      expect(cookie).toContain("authentication-token=");
+      expect(cookie).toMatch(/Max-Age=0|Expires=Thu, 01 Jan 1970/);
+    });
   });
 
   // ── Forms ────────────────────────────────────────────────────────────────────
