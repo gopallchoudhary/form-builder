@@ -740,8 +740,19 @@ five shares of one thing.
 - [x] Playwright: resume-after-refresh, the signed-out redirect, and the publish gate refusing
       a form with no questions
 - [x] Vitest integration tests for services against a real database
-- [x] CI running `lint` + `check-types` + `test` + `build`, then the browser journeys
+- [x] CI running `lint` + `check-types` + `test` + `build`
 - [x] `DESIGN.md` updated to match what ships
+- [x] **The browser journeys run locally, not in CI.** `pnpm --filter web e2e` is a manual
+      check, run on request or when something is failing and the unit tests cannot say why —
+      not part of the pre-push loop, and CI does not run it. So nothing is guarding these
+      regressions automatically, and the ones it found are worth re-running by hand after
+      touching any of the areas below:
+  - the public form's inputs (`readOnly` until the session exists) — a respondent typing
+    before hydration loses the answer, and no unit test can see it
+  - `auth.signOutUser` over tRPC — it once declared `z.undefined()` and was uncallable, while
+    the REST route the API tests use kept working and hid it
+  - the builder's autosave ordering, the tab-change flush, and publish's flush
+  - the sidebar's active-route rule, and the `?form=` selection round trip
 
 ### What the browser found that no test had
 
