@@ -26,8 +26,7 @@ import {
  */
 
 /** Exactly what `listResponses` sends, rather than a restatement of it. */
-export type ResponseRow =
-  RouterOutputs["response"]["listResponses"]["responses"][number];
+export type ResponseRow = RouterOutputs["response"]["listResponses"]["responses"][number];
 
 type RowStatus = ResponseRow["status"];
 
@@ -105,7 +104,7 @@ export function ResponseTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-border">
+    <div className="overflow-x-auto rounded-md bg-card ring-1 ring-border">
       <Table>
         <caption className="sr-only">Responses to this form</caption>
 
@@ -116,27 +115,14 @@ export function ResponseTable({
         */}
         <TableHeader className="bg-[#e8ebe6]">
           <TableRow className="hover:bg-[#e8ebe6]">
-            <TableHead className="w-40 text-eyebrow font-mono">
-              Response
-            </TableHead>
-            <TableHead className="w-28 text-eyebrow font-mono">
-              Status
-            </TableHead>
-            <TableHead className="w-40 text-eyebrow font-mono">
-              Started
-            </TableHead>
-            <TableHead className="w-24 text-eyebrow font-mono">
-              Duration
-            </TableHead>
+            <TableHead className="w-40 text-eyebrow font-mono">Response</TableHead>
+            <TableHead className="w-28 text-eyebrow font-mono">Status</TableHead>
+            <TableHead className="w-40 text-eyebrow font-mono">Started</TableHead>
+            <TableHead className="w-24 text-eyebrow font-mono">Duration</TableHead>
 
             {questions.map((question) => (
-              <TableHead
-                key={question.id}
-                className="min-w-48 text-eyebrow font-mono"
-              >
-                <span className="block text-eyebrow font-mono">
-                  {question.labelKey}
-                </span>
+              <TableHead key={question.id} className="min-w-48 text-eyebrow font-mono">
+                <span className="block text-eyebrow font-mono">{question.labelKey}</span>
                 <span className="text-muted-foreground mt-0.5 block font-sans text-xs font-normal tracking-normal normal-case">
                   {question.label}
                 </span>
