@@ -23,20 +23,16 @@ import { cn } from "~/lib/utils";
  * somebody wants and a preset list cannot express it.
  */
 
-export type StatusFilter = "COMPLETED" | "IN_PROGRESS" | "ALL";
+// The shape lives in the store, which owns the default and persists it; the component only
+// draws it.
+export type { ResponseFilters, StatusFilter } from "~/stores/console-store";
+import type { ResponseFilters, StatusFilter } from "~/stores/console-store";
 
 const STATUSES: Array<{ value: StatusFilter; label: string }> = [
   { value: "COMPLETED", label: "Complete" },
   { value: "IN_PROGRESS", label: "In progress" },
   { value: "ALL", label: "All" },
 ];
-
-export interface ResponseFilters {
-  status: StatusFilter;
-  search: string;
-  from: string;
-  to: string;
-}
 
 /** A local `YYYY-MM-DD`, which is what a date input gives and what the API wants. */
 function toInputDate(date: Date): string {

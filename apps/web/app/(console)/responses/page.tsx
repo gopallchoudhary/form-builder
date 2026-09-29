@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import { ResponseFiltersBar, type ResponseFilters } from "~/components/responses
 import { ResponsePagination } from "~/components/responses/pagination";
 import { ResponseTable } from "~/components/responses/response-table";
 import { Button } from "~/components/ui/button";
+import { useConsoleStore } from "~/stores/console-store";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +27,6 @@ import { useDeleteResponse, useExportCsv, useListResponses } from "~/hooks/api/r
 
 const PAGE_SIZE = 25;
 
-const INITIAL_FILTERS: ResponseFilters = { status: "COMPLETED", search: "", from: "", to: "" };
-
 /**
  * Responses, for one form, across every form the creator owns.
  *
@@ -38,11 +38,23 @@ const INITIAL_FILTERS: ResponseFilters = { status: "COMPLETED", search: "", from
  * one — it is the reason the builder store is now read only by the builder itself.
  */
 export default function ResponsesPage() {
-  const { selected, select, forms = [], isLoading } = useSelectedForm();
+  const { selected, stale, select, forms = [], isLoading } = useSelectedForm();
   const formId = selected;
 
-  const [filters, setFilters] = useState<ResponseFilters>(INITIAL_FILTERS);
-  const [page, setPage] = useState(1);
+  /*
+   * Filters and page live in the store, not in `useState`. They are a view of a particular
+   * form: a page-of-5 of its rows and a search string over its answers mean nothing against
+   * a different form, which is why `setLastForm` clears both.
+   */
+  const { filters, page, setResponsesFilters, setResponsesPage } = useConsoleStore(
+    useShallow((state) => ({
+      filters: state.responsesFilters,
+      page: state.responsesPage,
+      setResponsesFilters: state.setResponsesFilters,
+      setResponsesPage: state.setResponsesPage,
+    })),
+  );
+
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const { form } = useGetForm(formId);
@@ -69,15 +81,13 @@ export default function ResponsesPage() {
       settings: question.settings,
     }));
 
-  // Changing form invalidates the page, the filters' result count and any pending delete.
-  const applyFilters = (next: ResponseFilters) => {
-    setFilters(next);
-    setPage(1);
-  };
+  // `setResponsesFilters` already returns to the first page, because any filter change can
+  // change which page is valid.
+  const applyFilters = (next: ResponseFilters) => setResponsesFilters(next);
 
   const onSelect = (nextId: string) => {
-    setFilters(INITIAL_FILTERS);
-    setPage(1);
+    // The store clears filters and page; the pending delete is local and needs clearing
+    // here, since a confirmation for a row that is no longer on screen must not survive.
     setPendingDelete(null);
     select(nextId);
   };
@@ -135,6 +145,16 @@ export default function ResponsesPage() {
         <FormPicker value={formId} onChange={onSelect} />
       </div>
 
+      {/*
+       * The form asked for is gone. Worth saying out loud, because the fallback silently
+       * showing a different form would look like the data moved.
+       */}
+      {stale && (
+        <p role="status" className="text-muted-foreground text-sm">
+          That form is no longer available, so this is the most recently updated one.
+        </p>
+      )}
+
       {formId && (
         <>
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -167,7 +187,7 @@ export default function ResponsesPage() {
             page={page}
             pageSize={PAGE_SIZE}
             total={total ?? 0}
-            onPage={setPage}
+            onPage={setResponsesPage}
             isFetching={isFetching}
           />
         </>

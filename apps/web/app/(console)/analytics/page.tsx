@@ -38,10 +38,9 @@ import {
  * store, so switching between here and the overview keeps the same window.
  */
 export default function AnalyticsPage() {
-  const { selected, select, forms = [], isLoading } = useSelectedForm();
+  const { selected, stale, select, forms = [], isLoading } = useSelectedForm();
   const formId = selected;
 
-  const [rangeKey, setRangeKey] = useState<RangePreset>("30d");
   const { preset, setPreset, toQuery } = useAnalyticsStore(
     useShallow((state) => ({
       preset: state.preset,
@@ -49,6 +48,16 @@ export default function AnalyticsPage() {
       toQuery: state.toQuery,
     })),
   );
+
+  /*
+   * `null`, not `"30d"`.
+   *
+   * This used to initialise to the default, which meant `rangeKey || preset` never fell
+   * through to the store — so the persisted range was overridden on every mount and the
+   * buttons could claim 30 days while the query asked for 7. `null` says "the user has not
+   * clicked yet on this visit", which is what lets the stored preference show through.
+   */
+  const [rangeKey, setRangeKey] = useState<RangePreset | null>(null);
 
   const range = toQuery();
   const { form } = useGetForm(formId);
@@ -60,7 +69,9 @@ export default function AnalyticsPage() {
 
   // `rangeKey` is the local echo of the click, so the buttons respond immediately; the store
   // is what survives navigating away and back.
-  const activePreset = rangeKey || preset;
+  // `rangeKey` is the local echo of a click, so the buttons respond immediately; the store is
+  // what survives navigating away and back. Before a click, the store's own preset answers.
+  const activePreset = rangeKey ?? preset;
 
   if (forms.length === 0 && !isLoading) {
     return (
@@ -91,6 +102,12 @@ export default function AnalyticsPage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FormPicker value={formId} onChange={select} />
+
+        {stale && (
+          <p role="status" className="text-muted-foreground text-sm">
+            That form is no longer available, so this is the most recently updated one.
+          </p>
+        )}
 
         <div className="flex gap-1">
           {(Object.keys(RANGE_PRESETS) as RangePreset[]).map((option) => (

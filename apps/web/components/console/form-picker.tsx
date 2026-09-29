@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { InboxIcon } from "lucide-react";
 
+import { resolveSelectedForm } from "~/lib/console-selection";
+import { useConsoleStore } from "~/stores/console-store";
+
 import {
   Select,
   SelectContent,
@@ -86,45 +89,58 @@ export function FormPicker({
 }
 
 /**
- * Reads the form out of `?form=`, choosing one when the URL does not say.
+ * Which form a section is showing, and how to change it.
  *
- * The default is the most recently updated form, because somebody who has just been editing
- * something and then clicks "Responses" almost always means the thing they were editing —
- * and because an empty page behind a sidebar link is a worse answer than a plausible one.
- * The choice is written back to the URL, so the first render is shareable and the browser's
- * back button behaves.
+ * The resolution rules live in `lib/console-selection` and are unit-tested there; this is the
+ * wiring. Two things it deliberately does *not* do:
+ *
+ * - It does not write the chosen form into the URL on arrival. It used to, which meant the
+ *   address a creator copied from a bare `/responses` was a guess about them rather than
+ *   something they chose — and the "shareable link" was only ever the newest form's.
+ * - It does not remember anything itself. `console-store` does, so the choice survives
+ *   leaving the page, and so Responses and Analytics agree on which form you are looking at.
  */
 export function useSelectedForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { forms = [], isLoading } = useListForms();
 
-  const fromUrl = searchParams.get("form");
-  const known = forms.some((form) => form.id === fromUrl);
+  const lastFormId = useConsoleStore((state) => state.lastFormId);
 
-  // An id that is not in the list is a stale link — a form deleted, or another account's.
-  // Falling back rather than fetching it avoids rendering a permanently empty table.
-  const selected = known ? fromUrl : null;
+  const { selected, stale } = resolveSelectedForm({
+    fromUrl: searchParams.get("form"),
+    remembered: lastFormId,
+    forms,
+  });
 
+  const remember = useConsoleStore((state) => state.setLastForm);
+
+  /*
+   * A first-visit fallback is a guess, so it is remembered too — otherwise every visit
+   * without a parameter would re-derive it, and creating a new form would silently become
+   * the answer the next time somebody looked.
+   *
+   * Only for a *fallback*, though, and only once. `setLastForm` clears the response filters
+   * and page, because those belong to a form; calling it on every arrival wiped them the
+   * moment you came back, which is the exact loss this store exists to prevent. When the
+   * selection came from the URL or from memory, it is already the remembered form and
+   * there is nothing to record.
+   */
   useEffect(() => {
-    if (isLoading || selected) return;
+    if (isLoading || !selected) return;
+    if (searchParams.get("form") === selected) return;
+    if (lastFormId === selected) return;
 
-    const mostRecent = [...forms].sort(
-      (a, b) => new Date(b.updatedAt ?? 0).getTime() - new Date(a.updatedAt ?? 0).getTime(),
-    )[0];
-
-    if (!mostRecent) return;
-
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("form", mostRecent.id);
-    router.replace(`?${params.toString()}`, { scroll: false });
-  }, [isLoading, selected, forms, router, searchParams]);
+    remember(selected);
+  }, [isLoading, selected, searchParams, lastFormId, remember]);
 
   const select = (formId: string) => {
+    remember(formId);
+
     const params = new URLSearchParams(searchParams.toString());
     params.set("form", formId);
     router.replace(`?${params.toString()}`, { scroll: false });
   };
 
-  return { selected, select, forms, isLoading };
+  return { selected, stale, select, forms, isLoading };
 }

@@ -377,9 +377,30 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 - [x] `/f/[slug]/thanks`
 - [x] `components/form-tabs.tsx` — the four things you do *to* a form, mounted by each of those
       pages so a new tab is one entry plus one page
-- [x] `components/console/form-picker.tsx` — one picker, two sections. It owns the rule that no
-      form in the URL means the most recently updated one, which is why both pages behave
+- [x] `components/console/form-picker.tsx` — one picker, two sections, so both pages behave
       identically for free
+- [x] **Which form a section shows, in three tiers** — `?form=` in the URL (a link somebody
+      was sent, so it wins) → the last form this creator looked at → the most recently
+      updated one, and that last fallback only for a first visit. The middle tier did not
+      exist: the choice lived only in the URL, the sidebar links to a bare `/responses`, and
+      so every return visit fell through to the newest form
+- [x] Arriving with no `?form=` **no longer rewrites the URL**. It used to `router.replace` the
+      guessed form in, so the address a creator copied from a bare `/responses` was a guess
+      about them rather than something they had chosen — a "shareable link" that was only ever
+      the newest form's. The URL is now written only when the picker is used, so a link means
+      what it says
+- [x] `stores/console-store.ts` — `lastFormId`, the response filters and their page, persisted
+      for the same reason `analytics-store` keeps its range: these are view preferences, not
+      form data, and re-typing a search you set up thirty seconds ago is pure friction.
+      Switching form clears the row-based state, because page 4 of one form's rows is not
+      page 4 of another's
+- [x] The analytics range buttons read the store's preset on mount. `rangeKey` used to
+      initialise to `"30d"`, so `rangeKey || preset` never fell through and the persisted
+      range was silently overridden on every visit — the buttons could claim 30 days while the
+      query asked for 7
+- [x] A remembered or linked form that has since been deleted falls through to the newest one
+      and says so. Fetching it would render a table and charts that are permanently empty,
+      indistinguishable from a form nobody has answered yet
 
 ### Auth gating
 
