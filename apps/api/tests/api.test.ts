@@ -8,7 +8,6 @@ import {
   TEST_DATABASE_URL,
   type ServerTestDatabase,
 } from "@repo/database/tests/db-server";
-import { resetRateLimits } from "@repo/trpc/server";
 
 /**
  * The HTTP surface, end to end: routing, auth, ownership, validation and rate limits.
@@ -25,6 +24,7 @@ type App = { handle: (req: never, res: never) => void } | Express;
 
 let app: App;
 let server: ServerTestDatabase;
+let resetRateLimits: () => void;
 
 const available = hasTestDatabase;
 
@@ -37,8 +37,19 @@ describe.skipIf(!available)("the HTTP API", () => {
     server = await setupTestDatabase(SCOPE);
     process.env.DATABASE_URL = databaseUrlForScope(TEST_DATABASE_URL!, SCOPE);
 
+    /*
+     * Both imports are dynamic, and the order is the whole point.
+     *
+     * `@repo/trpc/server` builds the router when it loads, which reaches the services and
+     * opens the connection pool — and the pool reads `DATABASE_URL` once, at that moment.
+     * Imported at the top of the file it bound to whatever `.env` said, so every test in
+     * this suite wrote its users and forms into the *developer's* database and left them
+     * there. Repointing the variable afterwards changed nothing.
+     */
     const imported = await import("../src/server");
     app = imported.app as unknown as App;
+
+    ({ resetRateLimits } = await import("@repo/trpc/server"));
   });
 
   afterAll(async () => {

@@ -11,8 +11,8 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "dotenv -- vitest run",
+    "test:watch": "dotenv -- vitest"
   },
   "devDependencies": {
     "@types/supertest": "^7.2.1",
