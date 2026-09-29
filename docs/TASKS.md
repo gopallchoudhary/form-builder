@@ -339,12 +339,19 @@ Goal: routes, auth gating, state management, and a single renderer reused in two
 - [x] `/` → redirect by session
 - [x] `/dashboard` — overview analytics, on the real `getOverview` query (the POC rendered
       a hard-coded `data.json` chart)
-- [x] `/dashboard/forms` — list + create
-- [x] `/dashboard/forms/[formId]/build` — builder
-- [x] `/dashboard/forms/[formId]/settings`
-- [x] `/dashboard/forms/[formId]/share`
-- [x] `/dashboard/forms/[formId]/responses`
-- [x] `/dashboard/forms/[formId]/analytics`
+- [x] `/forms` — list + create
+- [x] `/forms/[formId]/build` — builder
+- [x] `/forms/[formId]/settings`
+- [x] `/forms/[formId]/share`
+- [x] `/forms/[formId]/responses`
+- [x] `/forms/[formId]/analytics`
+- [x] The console layout lives in `app/(console)/layout.tsx`, so `/dashboard` and `/forms` are
+      siblings in the URL and share one auth guard. They used to be nested, which meant
+      `/dashboard` was a prefix of every other console route and the sidebar lit up every
+      item on every page
+- [x] The dashboard lists no forms. It showed a second copy of the `/forms` list as a table,
+      and two pages listing the same things in different shapes is one more than a person can
+      be reminded of
 - [x] `/f/[slug]` — public form, definition fetched on the server
 - [x] `/f/[slug]/thanks`
 - [x] `components/form-tabs.tsx` — the five form sections, mounted by each of those pages so

@@ -75,7 +75,13 @@ export interface FormRendererProps {
   onBack?: () => void;
   onSubmit?: () => void;
   submitState?: "idle" | "submitting" | "done" | "error";
-  /** Hides the action row, for a static preview. */
+  /**
+   * Not interactive: the fields are disabled and the action row is hidden.
+   *
+   * Two callers, and they mean the same thing to a respondent — a static preview, and the
+   * short window on the public form before the session has been established and the inputs
+   * are actually listening.
+   */
   readOnly?: boolean;
   children?: React.ReactNode;
 }

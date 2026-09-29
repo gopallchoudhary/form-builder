@@ -24,7 +24,7 @@ const TABS = [
 ] as const;
 
 /**
- * Tab navigation for one form. Mounted by every `/dashboard/forms/[formId]/*` page, so a
+ * Tab navigation for one form. Mounted by every `/forms/[formId]/*` page, so a
  * new tab is one entry here plus one page.
  *
  * `onBeforeNavigate` exists for the builder, where leaving the tab unmounts the store's
@@ -42,7 +42,7 @@ export function FormTabs({
   const pathname = usePathname();
   const router = useRouter();
   const [leaving, setLeaving] = useState<string | null>(null);
-  const base = `/dashboard/forms/${formId}`;
+  const base = `/forms/${formId}`;
 
   return (
     <nav

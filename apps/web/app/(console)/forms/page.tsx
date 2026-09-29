@@ -75,7 +75,7 @@ function CreateFormModal() {
      * in it, and dropping them back on a list of forms makes them find it again by
      * recognising the title they just typed.
      */
-    router.push(`/dashboard/forms/${created.id}/build`);
+    router.push(`/forms/${created.id}/build`);
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -226,7 +226,7 @@ function FormCard({
       </CardContent>
 
       <CardFooter className="pt-4 pb-5 border-t mt-4">
-        <Link href={`/dashboard/forms/${id}/build`} id={`open-form-${id}`} className="ml-auto">
+        <Link href={`/forms/${id}/build`} id={`open-form-${id}`} className="ml-auto">
           <Button
             size="sm"
             variant="outline"

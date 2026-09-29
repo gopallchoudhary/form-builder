@@ -314,6 +314,20 @@ export function FormRuntime({
       onBack={() => void back()}
       onSubmit={() => void advance()}
       submitState={submitState}
+      /*
+       * Not interactive until the session exists.
+       *
+       * The definition is server-rendered, so the fields are on screen and focusable
+       * before React has hydrated and before `onChange` is wired to anything. A respondent
+       * on a slow connection could type a whole answer into a field that was only a picture
+       * of a field, and watch it vanish when hydration finished — the keystrokes never
+       * reached the store, so the draft saved empty and the answer was silently lost.
+       *
+       * Presenting a field as fillable before it can hold anything is the actual bug here;
+       * the "Getting this form ready" line was a hint, not a guard. Disabling the inputs
+       * also makes the behaviour honest for everyone, not just the unlucky.
+       */
+      readOnly={boot !== "ready"}
     >
       {boot === "error" && (
         <p role="alert" className="text-sm font-medium text-[#d03238]">

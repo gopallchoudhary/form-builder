@@ -2,22 +2,27 @@
 
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
-import { ArrowRightIcon, FileTextIcon } from "lucide-react";
+import { FileTextIcon } from "lucide-react";
 
 import { KpiRow } from "~/components/analytics/kpi-row";
 import { TrendChart } from "~/components/analytics/trend-chart";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useGetOverview } from "~/hooks/api/analytics";
 import { RANGE_PRESETS, useAnalyticsStore, type RangePreset } from "~/stores/analytics-store";
 
 /**
- * The dashboard: every form at once.
+ * The overview: every form at once.
  *
  * The same KPI row and trend chart the per-form page uses, over the same range — so the two
  * pages cannot disagree about how a number is defined, which is the usual way a dashboard
  * stops being trusted.
+ *
+ * The per-form list lives on `/forms`, not here. This page had a second copy of it — a
+ * table of the same forms with their counts — and two pages that list the same things in
+ * different shapes is one more than a person can be reminded of. `getOverview` still
+ * returns the list, because the ordering guarantee behind it is deliberate and tested; it
+ * is simply not rendered.
  */
 export default function OverviewPage() {
   const { preset, setPreset, toQuery } = useAnalyticsStore(
@@ -82,7 +87,7 @@ export default function OverviewPage() {
 
       {isLoading && <Skeleton className="h-64 w-full" />}
 
-      {data && data.forms.length === 0 && (
+      {data && data.totals.forms === 0 && (
         <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-20 text-center">
           <div className="bg-muted flex size-14 items-center justify-center rounded-full">
             <FileTextIcon className="text-muted-foreground size-7" />
@@ -94,62 +99,8 @@ export default function OverviewPage() {
             </p>
           </div>
           <Button asChild>
-            <Link href="/dashboard/forms">Go to forms</Link>
+            <Link href="/forms">Go to forms</Link>
           </Button>
-        </div>
-      )}
-
-      {data && data.forms.length > 0 && (
-        <div className="overflow-x-auto rounded-lg bg-card ring-1 ring-border">
-          <table className="w-full text-sm">
-            <caption className="sr-only">Your forms and their totals</caption>
-            <thead>
-              <tr className="bg-[#e8ebe6] border-b">
-                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
-                  Form
-                </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
-                  Status
-                </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
-                  Opened
-                </th>
-                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
-                  Finished
-                </th>
-                <th scope="col" className="w-24" />
-              </tr>
-            </thead>
-            <tbody>
-              {data.forms.map((form) => (
-                <tr key={form.id} className="border-b last:border-b-0 border-[#e8ebe6]">
-                  <td className="px-4 py-2.5 font-medium">{form.title}</td>
-                  <td className="px-4 py-2.5">
-                    <Badge
-                      variant="secondary"
-                      className={form.status === "PUBLISHED" ? "bg-[#e2f6d5] text-[#054d28]" : ""}
-                    >
-                      {form.status === "PUBLISHED"
-                        ? "Live"
-                        : form.status === "DRAFT"
-                          ? "Draft"
-                          : "Closed"}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-2.5 tabular-nums">{form.views}</td>
-                  <td className="px-4 py-2.5 tabular-nums">{form.completions}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Button asChild size="sm" variant="ghost">
-                      <Link href={`/dashboard/forms/${form.id}/analytics`}>
-                        Analytics
-                        <ArrowRightIcon className="size-3.5" />
-                      </Link>
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
     </div>

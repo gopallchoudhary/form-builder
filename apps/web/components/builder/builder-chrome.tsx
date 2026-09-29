@@ -137,7 +137,7 @@ export function BuilderChrome({
         <p className="text-muted-foreground max-w-sm text-sm">
           {error?.message ?? "It may have been deleted, or it is not yours."}
         </p>
-        <Button variant="outline" onClick={() => router.push("/dashboard/forms")}>
+        <Button variant="outline" onClick={() => router.push("/forms")}>
           Back to forms
         </Button>
       </div>

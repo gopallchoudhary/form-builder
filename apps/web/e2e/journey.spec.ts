@@ -30,14 +30,14 @@ async function signUp(page: Page) {
 
 /** A creator with a published stepper form holding a text and a yes/no question. */
 async function createPublishedForm(page: Page, title: string) {
-  await page.goto("/dashboard/forms");
+  await page.goto("/forms");
   // `.first()`, because an account with no forms shows the trigger twice: in the header
   // and in the empty state.
   await page.getByRole("button", { name: /new form/i }).first().click();
   await page.getByLabel(/^title/i).fill(title);
   await page.getByRole("button", { name: /^create form$/i }).click();
 
-  await page.waitForURL(/\/dashboard\/forms\/[0-9a-f-]{36}\/build/);
+  await page.waitForURL(/\/forms\/[0-9a-f-]{36}\/build/);
   const formId = page.url().match(/forms\/([0-9a-f-]{36})/)?.[1];
   expect(formId).toBeTruthy();
 
@@ -100,10 +100,10 @@ test.describe("the product, end to end", () => {
     await expect(form.getByRole("heading", { name: /thank you/i })).toBeVisible();
 
     // The outcome: the response is in the creator's table, and the count has moved.
-    await page.goto(`/dashboard/forms/${formId}/responses`);
+    await page.goto(`/forms/${formId}/responses`);
     await expect(page.getByRole("cell", { name: "Priya" })).toBeVisible();
 
-    await page.goto(`/dashboard/forms/${formId}/analytics`);
+    await page.goto(`/forms/${formId}/analytics`);
     const kpi = page.getByRole("region", { name: "Summary" });
     await expect(kpi.getByText("Responses")).toBeVisible();
 
@@ -173,10 +173,11 @@ test.describe("the product, end to end", () => {
     await stranger.goto("/dashboard");
     await expect(stranger).toHaveURL(/\/login$/);
 
-    // Not merely redirected: the protected shell was never sent.
+    // Not merely redirected: the protected shell was never sent. These are markers of the
+    // console layout, so finding either in the HTML would mean the guard ran too late.
     const html = await stranger.content();
-    expect(html).not.toContain("SectionCards");
-    expect(html).not.toContain("Your forms");
+    expect(html).not.toContain("Overview");
+    expect(html).not.toContain("Sign out");
 
     await anonymous.close();
   });
@@ -184,11 +185,11 @@ test.describe("the product, end to end", () => {
   test("a form with no questions cannot be published", async ({ page }) => {
     await signUp(page);
 
-    await page.goto("/dashboard/forms");
+    await page.goto("/forms");
     await page.getByRole("button", { name: /new form/i }).first().click();
     await page.getByLabel(/^title/i).fill(`Empty ${unique()}`);
     await page.getByRole("button", { name: /^create form$/i }).click();
-    await page.waitForURL(/\/dashboard\/forms\/[0-9a-f-]{36}\/build/);
+    await page.waitForURL(/\/forms\/[0-9a-f-]{36}\/build/);
 
     // The gate is a server rule, so the only honest way to see it is to try.
     await page.getByRole("button", { name: /^publish$/i }).click();

@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { useSignOut, useUser } from "~/hooks/api/auth";
+import { isNavItemActive } from "~/lib/nav";
 import { cn } from "~/lib/utils";
 
 /**
@@ -36,7 +37,7 @@ interface NavItem {
 
 const NAV_MAIN: NavItem[] = [
   { title: "Dashboard", url: "/dashboard", icon: IconLayoutDashboard },
-  { title: "Forms", url: "/dashboard/forms", icon: IconForms },
+  { title: "Forms", url: "/forms", icon: IconForms },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -67,7 +68,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <SidebarMenu>
           {NAV_MAIN.map((item) => {
-            const isActive = pathname === item.url || pathname.startsWith(`${item.url}/`);
+            const isActive = isNavItemActive(
+              pathname,
+              NAV_MAIN.map((entry) => entry.url),
+              item.url,
+            );
             return (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
