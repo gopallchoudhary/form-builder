@@ -91,15 +91,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <p className="truncate text-sm font-medium">
               {status === "loading" ? "…" : displayName}
             </p>
-            {user?.email && (
-              <p className="text-muted-foreground truncate text-xs">{user.email}</p>
-            )}
+            {user?.email && <p className="text-muted-foreground truncate text-xs">{user.email}</p>}
           </div>
         </div>
 
         <Button
           variant="ghost"
-          className={cn("w-full justify-start gap-2 text-muted-foreground")}
+          className={cn("w-full justify-start gap-2 text-muted-foreground rounded-md")}
           onClick={() => signOutUser()}
         >
           <IconLogout className="size-4" />

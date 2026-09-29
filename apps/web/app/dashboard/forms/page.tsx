@@ -210,7 +210,7 @@ function FormCard({
   createdAt: Date | null;
 }) {
   return (
-    <Card className="group flex flex-col justify-between gap-0 py-0 overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group rounded-lg flex flex-col justify-between gap-0 py-0 overflow-hidden transition-shadow hover:shadow-md">
       <CardHeader className="pt-6 pb-3">
         <CardTitle className="text-base truncate">{title}</CardTitle>
         {description && (

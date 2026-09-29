@@ -16,8 +16,7 @@ export interface Kpis {
   medianSeconds?: number | null;
 }
 
-const percent = (rate: number) =>
-  `${rate >= 0 && rate < 0.005 ? "<1" : Math.round(rate * 100)}%`;
+const percent = (rate: number) => `${rate >= 0 && rate < 0.005 ? "<1" : Math.round(rate * 100)}%`;
 
 export function formatDuration(seconds: number | null): string {
   if (seconds === null) return "—";
@@ -40,7 +39,7 @@ export function KpiRow({ kpis, caption }: { kpis: Kpis; caption?: string }) {
     <section aria-label="Summary">
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {tiles.map((tile) => (
-          <div key={tile.label} className="rounded-xl bg-card p-4 ring-1 ring-border">
+          <div key={tile.label} className="rounded-lg bg-card p-4 ring-1 ring-border">
             <dt className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
               {tile.label}
             </dt>

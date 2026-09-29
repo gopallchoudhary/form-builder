@@ -10,11 +10,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useGetOverview } from "~/hooks/api/analytics";
-import {
-  RANGE_PRESETS,
-  useAnalyticsStore,
-  type RangePreset,
-} from "~/stores/analytics-store";
+import { RANGE_PRESETS, useAnalyticsStore, type RangePreset } from "~/stores/analytics-store";
 
 /**
  * The dashboard: every form at once.
@@ -104,33 +100,21 @@ export default function OverviewPage() {
       )}
 
       {data && data.forms.length > 0 && (
-        <div className="overflow-x-auto rounded-xl bg-card ring-1 ring-border">
+        <div className="overflow-x-auto rounded-lg bg-card ring-1 ring-border">
           <table className="w-full text-sm">
             <caption className="sr-only">Your forms and their totals</caption>
             <thead>
               <tr className="bg-[#e8ebe6] border-b">
-                <th
-                  scope="col"
-                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
-                >
+                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
                   Form
                 </th>
-                <th
-                  scope="col"
-                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
-                >
+                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
                   Status
                 </th>
-                <th
-                  scope="col"
-                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
-                >
+                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
                   Opened
                 </th>
-                <th
-                  scope="col"
-                  className="px-4 py-2.5 text-left text-eyebrow font-mono"
-                >
+                <th scope="col" className="px-4 py-2.5 text-left text-eyebrow font-mono">
                   Finished
                 </th>
                 <th scope="col" className="w-24" />
@@ -145,7 +129,11 @@ export default function OverviewPage() {
                       variant="secondary"
                       className={form.status === "PUBLISHED" ? "bg-[#e2f6d5] text-[#054d28]" : ""}
                     >
-                      {form.status === "PUBLISHED" ? "Live" : form.status === "DRAFT" ? "Draft" : "Closed"}
+                      {form.status === "PUBLISHED"
+                        ? "Live"
+                        : form.status === "DRAFT"
+                          ? "Draft"
+                          : "Closed"}
                     </Badge>
                   </td>
                   <td className="px-4 py-2.5 tabular-nums">{form.views}</td>

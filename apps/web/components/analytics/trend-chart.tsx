@@ -52,7 +52,7 @@ export function TrendChart({
   }));
 
   return (
-    <section className="rounded-xl bg-card p-5 ring-1 ring-border">
+    <section className="rounded-lg bg-card p-5 ring-1 ring-border">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-medium">Trend</h2>
         <p className="text-muted-foreground text-xs">by {granularity}</p>
