@@ -22,10 +22,8 @@ import {
   SidebarRail,
 } from "~/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Button } from "~/components/ui/button";
 import { useSignOut, useUser } from "~/hooks/api/auth";
 import { isNavItemActive } from "~/lib/nav";
-import { cn } from "~/lib/utils";
 
 /**
  * The creator console's navigation.
@@ -113,14 +111,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </div>
         </div>
 
-        <Button
-          variant="ghost"
-          className={cn("w-full justify-start gap-2 text-muted-foreground rounded-md")}
-          onClick={() => signOutUser()}
-        >
-          <IconLogout className="size-4" />
-          Sign out
-        </Button>
+        {/*
+          A `SidebarMenuButton` rather than a plain button, so it collapses the same way the
+          navigation above it does: icon only, and a tooltip carrying the label that the
+          collapsed width has no room for. Without the tooltip the text would just be gone,
+          which leaves an unlabelled icon in the footer.
+        */}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Sign out"
+              className="text-muted-foreground"
+              onClick={() => signOutUser()}
+            >
+              <IconLogout />
+              <span>Sign out</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
 
       <SidebarRail />
