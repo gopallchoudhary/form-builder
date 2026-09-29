@@ -4,7 +4,16 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { PlusIcon, FileTextIcon, Loader2Icon, ArrowRightIcon, CalendarIcon } from "lucide-react";
+import {
+  PlusIcon,
+  FileTextIcon,
+  Loader2Icon,
+  ArrowRightIcon,
+  CalendarIcon,
+  LinkIcon,
+  CheckIcon,
+} from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -28,6 +37,8 @@ import { Textarea } from "~/components/ui/textarea";
 import { Field, FieldGroup, FieldLabel } from "~/components/ui/field";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useCreateForm, useListForms } from "~/hooks/api/form";
+import { publicFormUrl } from "~/lib/share-url";
+import { cn } from "~/lib/utils";
 
 type CreateFormValues = {
   title: string;
@@ -200,15 +211,52 @@ function FormCardSkeleton() {
 // ── Form Card ──────────────────────────────────────────────────────────────────
 function FormCard({
   id,
+  slug,
   title,
   description,
+  status,
   createdAt,
 }: {
   id: string;
+  slug: string;
   title: string;
   description?: string | null;
+  status: "DRAFT" | "PUBLISHED" | "CLOSED";
   createdAt: Date | null;
 }) {
+  const [copied, setCopied] = useState(false);
+
+  const share = publicFormUrl(slug);
+  const isDraft = status === "DRAFT";
+
+  /*
+   * Copying rather than navigating, because a creator on this page is looking at a list, not
+   * editing anything — and "get me the link" is the question the icon answers.
+   *
+   * The clipboard rejects on any page that is not a secure origin, which is exactly how you
+   * would reach a dev server from a phone on the LAN (`http://192.168.x.x:3000` is not
+   * secure). Falling back to showing the URL means the button is never a silent no-op.
+   */
+  const copyLink = async () => {
+    if (!share) return;
+
+    try {
+      await navigator.clipboard.writeText(share);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+
+      toast.success(
+        isDraft
+          ? "Link copied — this form is a draft, so it will not accept responses until you publish it."
+          : "Link copied",
+      );
+    } catch {
+      toast.error("Could not copy", {
+        description: share,
+      });
+    }
+  };
+
   return (
     <Card className="group rounded-lg flex flex-col justify-between gap-0 py-0 overflow-hidden transition-shadow hover:shadow-md">
       <CardHeader className="pt-6 pb-3">
@@ -226,6 +274,28 @@ function FormCard({
       </CardContent>
 
       <CardFooter className="pt-4 pb-5 border-t mt-4">
+        <Button
+          size="icon"
+          variant="ghost"
+          // Named per form: a grid of eight identical "Copy link" buttons tells a screen
+          // reader nothing about which is which.
+          aria-label={`Copy share link for ${title}`}
+          disabled={!share}
+          onClick={() => void copyLink()}
+          className={cn(
+            "size-8 rounded-md transition-colors",
+            // Dimmed rather than hidden, so a draft still offers the link — sharing one
+            // early is a real thing to want — and the toast explains why it will not work yet.
+            isDraft && "text-muted-foreground/60",
+          )}
+        >
+          {copied ? (
+            <CheckIcon className="text-[#2ead4b]" />
+          ) : (
+            <LinkIcon className={cn("transition-transform", isDraft && "opacity-70")} />
+          )}
+        </Button>
+
         <Link href={`/forms/${id}/build`} id={`open-form-${id}`} className="ml-auto">
           <Button
             size="sm"
@@ -274,8 +344,10 @@ const FormsPage = () => {
             <FormCard
               key={form.id}
               id={form.id}
+              slug={form.slug}
               title={form.title}
               description={form.description}
+              status={form.status}
               createdAt={form.createdAt ? new Date(form.createdAt) : null}
             />
           ))}
