@@ -9,8 +9,41 @@ import { Button } from "~/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Separator } from "~/components/ui/separator";
+import { env } from "~/env.js";
 import { useUpdateFormSlug } from "~/hooks/api/form";
 import { useBuilderStore } from "~/stores/builder-store";
+
+/** A trailing slash in the base would produce `//f/…`, which some servers treat differently. */
+function baseUrl(): string {
+  const configured = env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "");
+
+  if (configured) return configured;
+
+  /*
+   * The share link is the product's main artefact, so it should not be the one thing that
+   * stops working on a machine that has not set the variable. Falling back to the origin
+   * being viewed gives a link that is correct for whoever is looking at it.
+   *
+   * The warn matters: this fallback is only correct for a single-domain deploy, and a
+   * production instance missing this would otherwise hand out links silently pointing at
+   * wherever it happens to be running. It is a safety net, not a substitute for configuring
+   * `NEXT_PUBLIC_APP_URL`.
+   */
+  if (typeof window !== "undefined") {
+    console.warn(
+      "[share] NEXT_PUBLIC_APP_URL is not set; falling back to window.location.origin.",
+      "Set it in .env — the link will be wrong on any other host.",
+    );
+    return window.location.origin;
+  }
+
+  return "";
+}
+
+/** The link a creator copies, and the one the QR code encodes. */
+function publicFormUrl(slug: string): string {
+  return `${baseUrl()}/f/${slug}`;
+}
 
 /**
  * Sharing: the link, a QR code for it, and whether the form is actually live.
@@ -28,8 +61,7 @@ export function ShareWorkspace() {
   const [copied, setCopied] = useState(false);
   const [svg, setSvg] = useState<string | null>(null);
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
-  const shareUrl = definition ? `${appUrl}/f/${definition.slug}` : "";
+  const shareUrl = definition ? publicFormUrl(definition.slug) : "";
 
   useEffect(() => {
     if (definition) setSlug(definition.slug);

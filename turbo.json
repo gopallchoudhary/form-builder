@@ -7,7 +7,8 @@
     "DATABASE_URL_TEST",
     "API_URL",
     "CI",
-    "NEXT_DIST_DIR"
+    "NEXT_DIST_DIR",
+    "NEXT_PUBLIC_APP_URL"
   ],
   "tasks": {
     "build": {

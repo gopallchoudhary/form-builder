@@ -64,6 +64,11 @@ export default defineConfig({
         // Its own build directory, so this dev server does not contend for the lock with a
         // developer's `pnpm dev` and the suite can run without stopping it.
         NEXT_DIST_DIR: ".next-e2e",
+        // The origin that share links and QR codes are built from. It has to be this run's
+        // own web origin, not the developer's 3000: the suite asserts the link is absolute,
+        // and a value pointing elsewhere would either fail that or quietly pass on a link to
+        // the wrong host.
+        NEXT_PUBLIC_APP_URL: `http://localhost:${WEB_PORT}`,
         // The browser talks to the API through `NEXT_PUBLIC_API_URL` and the server
         // components through `API_URL`; both have to point at *this run's* API, not at
         // whatever a developer happens to have on 8000.

@@ -22,7 +22,23 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_API_URL: z.string().optional(),
-    NEXT_PUBLIC_APP_URL: z.string().optional(),
+
+    /**
+     * The base URL that share links and QR codes are built from.
+     *
+     * Required, and validated as a URL, because it produces the product's main artefact: a
+     * link that looks right and cannot be opened by anyone it is sent to is worse than a
+     * build failure. It was `.optional()` for a while, and the share page quietly rendered
+     * bare `/f/my-form` paths for every form — a bug the e2e suite passed, since its
+     * assertion only checked that the string contained `/f/`.
+     *
+     * Note this is inlined at **build** time, not read at runtime. One bundle carries one
+     * base URL, so a deployment that serves the same build on several hostnames would need
+     * the origin from somewhere else. The share page falls back to `window.location.origin`
+     * when this is missing, which covers local dev and a single-domain deploy; that fallback
+     * is a safety net, not a substitute for setting this.
+     */
+    NEXT_PUBLIC_APP_URL: z.string().url(),
   },
 
   /**

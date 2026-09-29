@@ -60,7 +60,20 @@ async function createPublishedForm(page: Page, title: string) {
   const link = page.getByLabel("Public form link");
   await expect(link).toBeVisible();
   const shareUrl = await link.inputValue();
-  expect(shareUrl).toMatch(/\/f\//);
+
+  /*
+   * Absolute, with the origin it was configured with.
+   *
+   * This used to assert only that the string contained `/f/`, which a bare `/f/my-form`
+   * satisfies — so the suite was green while every share link in the app was something no
+   * respondent could open. The property worth protecting is that the link can be pasted into a
+   * chat and work, which means a real origin, not just a path.
+   */
+  const parsed = new URL(shareUrl);
+  expect(parsed.origin, "share link needs an origin, not a bare path").toBe(
+    new URL(page.url()).origin,
+  );
+  expect(parsed.pathname).toMatch(/^\/f\/[a-z0-9-]+$/);
 
   await page.getByRole("link", { name: "Build" }).click();
   await page.getByRole("button", { name: /^publish$/i }).click();
