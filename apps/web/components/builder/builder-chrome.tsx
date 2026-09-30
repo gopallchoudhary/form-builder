@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,7 @@ import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { FormTabs } from "~/components/form-tabs";
 import { useGetForm, useGetFormSettings, useSetFormStatus } from "~/hooks/api/form";
+import { trpc } from "~/trpc/client";
 import { useBuilderStore } from "~/stores/builder-store";
 import { useAutosave } from "~/stores/builder-store/use-autosave";
 
@@ -89,6 +90,7 @@ export function BuilderChrome({
   const { setFormStatusAsync, status: publishStatus, isError: publishFailed, error: publishError } =
     useSetFormStatus();
 
+  const utils = trpc.useUtils();
   const hydrate = useBuilderStore((state) => state.hydrate);
   const applyStatus = useBuilderStore((state) => state.applyStatus);
   const definition = useBuilderStore((state) => state.definition);
@@ -111,15 +113,31 @@ export function BuilderChrome({
     const updated = await setFormStatusAsync({ formId, status });
     // The chip reads the store, and the store is not refetched by a mutation.
     applyStatus(updated.status, updated.publishedAt);
+
+    // The list on `/forms` badges each card with its status, and it reads a cached query
+    // that a status mutation does not touch — so without this, a form published here still
+    // reads Draft back on the list until a manual reload.
+    await utils.form.listForms.invalidate();
   };
 
   /**
-   * Hydrate once per form. Keyed on the id rather than on `form`, because the query
-   * refetches after a save and re-hydrating would discard edits typed since.
+   * Hydrate once per mount, and again only when the form itself changes.
+   *
+   * Keyed on the id rather than on `form` alone, because the query refetches after a save
+   * and re-hydrating then would discard edits typed since. But keying on the id *alone* was
+   * too strong in the other direction: the store outlives the page, so reopening a form the
+   * creator had already loaded matched `definition?.id === form.id`, skipped hydration
+   * entirely, and rendered whatever the previous visit left behind — stale questions, a
+   * stale status, and a stale undo stack, even after the form had been changed or deleted
+   * elsewhere. Tracking the id we hydrated for, once per mount, separates the two cases.
    */
+  const hydratedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (form && definition?.id !== form.id) hydrate(form);
-  }, [form, definition?.id, hydrate]);
+    if (!form) return;
+    if (hydratedFor.current === form.id) return;
+    hydratedFor.current = form.id;
+    hydrate(form);
+  }, [form, hydrate]);
 
   if (isLoading || !definition) {
     return (

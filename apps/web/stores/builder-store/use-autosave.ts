@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { api } from "~/trpc/api";
+import { trpc } from "~/trpc/client";
 import { useBuilderStore } from "~/stores/builder-store";
 import { planSync } from "~/stores/builder-store/plan-sync";
 import { runSync, type SyncExecutor } from "~/stores/builder-store/run-sync";
@@ -32,6 +33,19 @@ export function useAutosave(enabled = true) {
   const inFlight = useRef<Promise<void> | null>(null);
   // Reset by every fresh edit, so a burst of typing is not punished by earlier failures.
   const attempts = useRef(0);
+
+  /*
+   * How the cached form list is told it is out of date, held in a ref rather than closed
+   * over directly: `flush` is a `useCallback` with no dependencies, and closing over the
+   * query client would rebuild it on every render and restart the debounce with it.
+   */
+  const utils = trpc.useUtils();
+  const invalidateList = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    invalidateList.current = () => {
+      void utils.form.listForms.invalidate();
+    };
+  }, [utils]);
 
   // The uncached `api` client, not the React Query one: the store is the source of truth
   // here, and a cache invalidation would refetch a definition the builder is mid-edit on.
@@ -84,6 +98,17 @@ export function useAutosave(enabled = true) {
        * by the next plan, so nothing is lost by recording them as unsaved.
        */
       useBuilderStore.getState().reconcileSync(synced, idMap);
+
+      /*
+       * The list on `/forms` is rendered from the cached `listForms` query, which this
+       * uncached client never touches — so a title edited in the builder stays showing the
+       * old one until something refetches, and returning to the list shows a stale name.
+       *
+       * Scoped to `listForms` on purpose. Invalidation is a refetch, and refetching
+       * `getForm` here would overwrite a definition the creator is still typing into, which
+       * is the whole reason the autosave bypasses the cache.
+       */
+      void invalidateList.current?.();
     })();
 
     inFlight.current = work;

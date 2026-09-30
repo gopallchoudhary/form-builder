@@ -39,6 +39,8 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useCreateForm, useListForms } from "~/hooks/api/form";
 import { publicFormUrl } from "~/lib/share-url";
 import { cn } from "~/lib/utils";
+import { resolveBuilderHref } from "~/lib/builder-href";
+import { useConsoleStore } from "~/stores/console-store";
 
 type CreateFormValues = {
   title: string;
@@ -226,6 +228,11 @@ function FormCard({
 }) {
   const [copied, setCopied] = useState(false);
 
+  // Reopen where this creator left off rather than always at Build. The section is a route,
+  // so the URL is what actually decides the destination; this only chooses what to point at.
+  const lastSection = useConsoleStore((state) => state.lastSectionByForm[id]);
+  const href = resolveBuilderHref(id, lastSection);
+
   const share = publicFormUrl(slug);
   const isDraft = status === "DRAFT";
 
@@ -296,7 +303,7 @@ function FormCard({
           )}
         </Button>
 
-        <Link href={`/forms/${id}/build`} id={`open-form-${id}`} className="ml-auto">
+        <Link href={href} id={`open-form-${id}`} className="ml-auto">
           <Button
             size="sm"
             variant="outline"

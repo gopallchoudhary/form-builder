@@ -7,6 +7,8 @@ import { StatusChip } from "~/components/builder/builder-chrome";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useGetForm } from "~/hooks/api/form";
+import { resolveBuilderHref } from "~/lib/builder-href";
+import { useConsoleStore } from "~/stores/console-store";
 
 /**
  * The header on a top-level section: which form, and how to get back to editing it.
@@ -29,6 +31,12 @@ export function SectionHeader({
   // differ for a moment after a rename.
   const { form } = useGetForm(formId);
 
+  // Back to the section they were last editing, not always Build. Reading the whole map
+  // keyed by form would re-render on any form's section changing; this narrows to the one
+  // entry that matters to the link being rendered.
+  const lastSection = useConsoleStore((state) => (formId ? state.lastSectionByForm[formId] : undefined));
+  const href = resolveBuilderHref(formId ?? "", lastSection);
+
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
@@ -41,7 +49,7 @@ export function SectionHeader({
 
       {formId ? (
         <Button asChild variant="outline" className="gap-2">
-          <Link href={`/forms/${formId}/build`}>
+          <Link href={href}>
             <SquarePenIcon className="size-4" />
             Open builder
           </Link>

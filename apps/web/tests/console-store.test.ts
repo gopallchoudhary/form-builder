@@ -14,6 +14,7 @@ describe("useConsoleStore", () => {
   beforeEach(() => {
     useConsoleStore.setState({
       lastFormId: null,
+      lastSectionByForm: {},
       responsesFilters: INITIAL_RESPONSE_FILTERS,
       responsesPage: 1,
     });
@@ -69,5 +70,63 @@ describe("useConsoleStore", () => {
 
     expect(useConsoleStore.getState().responsesPage).toBe(3);
     expect(useConsoleStore.getState().lastFormId).toBe("form-a");
+  });
+});
+
+/**
+ * The remembered builder section, which is what lets the form card reopen where its creator
+ * left off rather than always at Build.
+ */
+describe("rememberSection", () => {
+  beforeEach(() => {
+    useConsoleStore.setState({ lastSectionByForm: {} });
+  });
+
+  it.each(["build", "settings", "share"] as const)("remembers %s", (section) => {
+    useConsoleStore.getState().rememberSection("form-a", section);
+    expect(useConsoleStore.getState().lastSectionByForm["form-a"]).toBe(section);
+  });
+
+  it("ignores preview, so the card cannot reopen a read-only view", () => {
+    // Preview is a glance at the form rather than a place to work. Reopening a form there
+    // would drop the creator into a view with no way to type, which is worse than Build.
+    useConsoleStore.getState().rememberSection("form-a", "preview");
+    expect(useConsoleStore.getState().lastSectionByForm["form-a"]).toBeUndefined();
+  });
+
+  it("ignores a segment that is not a real section", () => {
+    // The value arrives from a URL. An unknown one must not reach the map and later produce
+    // a link to a route that does not exist.
+    useConsoleStore.getState().rememberSection("form-a", "responses");
+    expect(useConsoleStore.getState().lastSectionByForm["form-a"]).toBeUndefined();
+  });
+
+  it("keeps one form's section out of another's", () => {
+    // The reason this is keyed by form rather than held as a single value: a single value
+    // gets overwritten by the second form and silently rewrites the first one's memory.
+    const store = useConsoleStore.getState();
+    store.rememberSection("form-a", "settings");
+    store.rememberSection("form-b", "share");
+
+    expect(useConsoleStore.getState().lastSectionByForm).toEqual({
+      "form-a": "settings",
+      "form-b": "share",
+    });
+  });
+
+  it("replaces the object rather than mutating it", () => {
+    // The persist middleware compares by reference, so an in-place write would update the
+    // store and then skip the localStorage write that makes the memory survive a reload.
+    const before = useConsoleStore.getState().lastSectionByForm;
+    useConsoleStore.getState().rememberSection("form-a", "build");
+    expect(useConsoleStore.getState().lastSectionByForm).not.toBe(before);
+  });
+
+  it("leaves the map alone when the section has not changed", () => {
+    // A no-op avoids a pointless write on every render of the same tab.
+    useConsoleStore.getState().rememberSection("form-a", "build");
+    const after = useConsoleStore.getState().lastSectionByForm;
+    useConsoleStore.getState().rememberSection("form-a", "build");
+    expect(useConsoleStore.getState().lastSectionByForm).toBe(after);
   });
 });

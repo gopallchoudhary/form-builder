@@ -24,6 +24,7 @@ import {
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { useSignOut, useUser } from "~/hooks/api/auth";
 import { isNavItemActive } from "~/lib/nav";
+import { navHref } from "~/lib/builder-href";
 
 /**
  * The creator console's navigation.
@@ -87,7 +88,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                  <Link href={item.url}>
+                  <Link href={navHref(item.url, pathname)}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

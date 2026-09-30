@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   EyeIcon,
   LinkIcon,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
+import { useConsoleStore } from "~/stores/console-store";
 
 /*
  * The four things you do *to* a form.
@@ -48,6 +49,22 @@ export function FormTabs({
   const router = useRouter();
   const [leaving, setLeaving] = useState<string | null>(null);
   const base = `/forms/${formId}`;
+
+  const rememberSection = useConsoleStore((state) => state.rememberSection);
+  const activeSegment = pathname.startsWith(`${base}/`)
+    ? pathname.slice(base.length + 1).split("/")[0]
+    : null;
+
+  /*
+   * Record the open section so `/forms` can link back here instead of always to Build.
+   *
+   * Every `/forms/[formId]/*` page mounts this, so one effect covers all four. `preview` is
+   * filtered out inside `rememberSection` — it is read-only, and remembering it would drop
+   * someone who glanced at their form into a view they cannot type in.
+   */
+  useEffect(() => {
+    if (activeSegment) rememberSection(formId, activeSegment);
+  }, [formId, activeSegment, rememberSection]);
 
   return (
     <nav
