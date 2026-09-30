@@ -72,6 +72,21 @@ export interface ConsoleState {
    */
   lastBuilderFormId: string | null;
 
+  /**
+   * Whether the sidebar's Forms link should resume the builder or show the list.
+   *
+   * Stated rather than inferred. The id above answers *which* form; this answers *whether*,
+   * and the difference is the whole behaviour: a creator who opens a builder and then leaves it
+   * with the back button has said they are done, and the next click on Forms must reach the
+   * list. Deriving that from the current page instead meant the back button was undone by the
+   * very next click, because nothing recorded the decision — only the accident of having
+   * visited a builder at some point.
+   *
+   * Only the back button clears it. Leaving by browser back, or via the Streamyst logo, leaves
+   * it set, and so still resumes: the flag records the last *deliberate* exit, not every exit.
+   */
+  resumeBuilder: boolean;
+
   responsesFilters: ResponseFilters;
   responsesPage: number;
 
@@ -88,6 +103,14 @@ export interface ConsoleState {
    * written out of step and leave the sidebar resuming a form at a section it was never on.
    */
   rememberBuilder: (formId: string, segment: string) => void;
+  /**
+   * Record that this builder was left on purpose, so the sidebar stops resuming it.
+   *
+   * Leaves `lastBuilderFormId` and the per-form sections alone. The form is still the one to
+   * reopen, and the list's card still lands on the right section — only the automatic redirect
+   * to it is withdrawn.
+   */
+  leaveBuilder: () => void;
 }
 
 export const useConsoleStore = create<ConsoleState>()(
@@ -96,6 +119,7 @@ export const useConsoleStore = create<ConsoleState>()(
       lastFormId: null,
       lastSectionByForm: {},
       lastBuilderFormId: null,
+      resumeBuilder: false,
       responsesFilters: INITIAL_RESPONSE_FILTERS,
       responsesPage: 1,
 
@@ -126,17 +150,35 @@ export const useConsoleStore = create<ConsoleState>()(
            * working on that form — but it is not a section to be resumed to, so the remembered
            * section is left holding whatever real section they had last. Moving between the
            * real sections of a form still updates both, so resuming lands where they left.
+           *
+           * `resumeBuilder` is re-asserted on every visit, so reopening a builder by any route
+           * re-arms the sidebar's resume. That is why the back button has to clear it again.
            */
-          if (!section && state.lastBuilderFormId === formId) return state;
-          if (section && state.lastBuilderFormId === formId && state.lastSectionByForm[formId] === section) {
-            return state;
-          }
+          /*
+           * Nothing new to record, but the flag may still need raising: the back button clears
+           * it, and re-entering the same form at the same section changes nothing else. Skipping
+           * the write on the strength of an unchanged form and section would leave the flag off
+           * for good, and the sidebar would never resume again after a single deliberate exit.
+           */
+          const nothingToRecord =
+            !section && state.lastBuilderFormId === formId
+              ? true
+              : Boolean(
+                  section &&
+                    state.lastBuilderFormId === formId &&
+                    state.lastSectionByForm[formId] === section,
+                );
+
+          if (nothingToRecord) return state.resumeBuilder ? state : { resumeBuilder: true };
 
           return {
             lastBuilderFormId: formId,
+            resumeBuilder: true,
             ...(section ? { lastSectionByForm: { ...state.lastSectionByForm, [formId]: section } } : {}),
           };
         }),
+
+      leaveBuilder: () => set((state) => (state.resumeBuilder ? { resumeBuilder: false } : state)),
     }),
     { name: "streamyst:console" },
   ),

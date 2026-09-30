@@ -69,6 +69,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const builderSection = useConsoleStore((state) =>
     builderFormId ? state.lastSectionByForm[builderFormId] : undefined,
   );
+  /*
+   * Whether Forms should resume the builder at all. A stated decision rather than an inference:
+   * the back button clears this, and without it a creator who left a builder was pulled back
+   * into it by the next click on Forms.
+   */
+  const resumeBuilder = useConsoleStore((state) => state.resumeBuilder);
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -98,7 +104,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                  <Link href={navHref(item.url, pathname, { formId: builderFormId, section: builderSection })}>
+                  <Link
+                    href={navHref(
+                      item.url,
+                      pathname,
+                      { formId: builderFormId, section: builderSection },
+                      resumeBuilder,
+                    )}
+                  >
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

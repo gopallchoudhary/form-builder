@@ -31,11 +31,12 @@ describe("resolveBuilderHref", () => {
 });
 
 /**
- * The sidebar's Forms link, which returns to the builder rather than the list.
+ * The sidebar's Forms link, which returns to the builder rather than the list — but only while
+ * the creator is still working on one.
  *
- * This was the actual bug: a static `/forms` sent a creator who was mid-edit to the list and
- * dropped the section they were on, so the remembered-section work in `console-store` was
- * never consulted at all.
+ * Two bugs live here. A static `/forms` sent a creator who was mid-edit to the list and dropped
+ * the section they were on. Then, fixing that, resume followed from having *ever* visited a
+ * builder, so the back button's escape was undone by the next click on Forms.
  */
 describe("navHref", () => {
   it("sends Forms back to the section the creator is on", () => {
@@ -66,41 +67,55 @@ describe("navHref", () => {
     expect(navHref("/analytics", "/forms/form-a/share")).toBe("/analytics");
   });
 
-  describe("once stepped away from the builder", () => {
-    // Responses and Analytics take a form in `?form=` and have no notion of a builder, so the
-    // url says nothing about which form was being edited. The remembered builder is the only
-    // thing that can answer, and without it Forms dumps a creator mid-project on the list.
-    it("resumes the remembered form and section", () => {
-      expect(
-        navHref("/forms", "/responses?form=form-a", { formId: "form-a", section: "settings" }),
-      ).toBe("/forms/form-a/settings");
+  describe("the resume flag", () => {
+    /*
+     * The bug this exists to fix: resume used to follow from "a builder had been visited at
+     * some point", so the back button navigated to `/forms` and the very next click on Forms
+     * dragged the creator straight back into the builder they had just left. The flag is what
+     * the back button clears, and it is the only thing that decides.
+     */
+
+    const builder = { formId: "form-a", section: "settings" };
+
+    it.each(["/dashboard", "/responses", "/analytics", "/forms"])(
+      "resumes from %s while the flag is on",
+      (path) => {
+        expect(navHref("/forms", path, builder, true)).toBe("/forms/form-a/settings");
+      },
+    );
+
+    it.each(["/dashboard", "/responses", "/analytics", "/forms"])(
+      "shows the list from %s once the back button has cleared it",
+      (path) => {
+        expect(navHref("/forms", path, builder, false)).toBe("/forms");
+      },
+    );
+
+    it("defaults to the list for a creator who has never left a builder", () => {
+      expect(navHref("/forms", "/dashboard")).toBe("/forms");
+      expect(navHref("/forms", "/dashboard", undefined, false)).toBe("/forms");
     });
 
-    it("prefers the remembered section over the form someone is reading", () => {
-      // `lastFormId` and `lastBuilderFormId` are deliberately separate: reading responses for
-      // one form while editing another is a normal thing to be doing.
-      expect(
-        navHref("/forms", "/responses?form=form-b", { formId: "form-a", section: "share" }),
-      ).toBe("/forms/form-a/share");
+    it("shows the list when the flag is on but no form was ever visited", () => {
+      // The flag and the id are written by different code paths in time — a cleared form with
+      // a set flag must not produce a link to `/forms/null`.
+      expect(navHref("/forms", "/dashboard", { formId: null, section: "settings" }, true)).toBe(
+        "/forms",
+      );
     });
 
     it("falls back to build for a remembered section that is not real", () => {
       expect(
-        navHref("/forms", "/dashboard", { formId: "form-a", section: "nonsense" }),
+        navHref("/forms", "/dashboard", { formId: "form-a", section: "nonsense" }, true),
       ).toBe("/forms/form-a/build");
     });
 
-    it("shows the list when no builder has been opened", () => {
-      // Otherwise Forms would have no list destination at all for a first-time creator.
-      expect(navHref("/forms", "/dashboard")).toBe("/forms");
-      expect(navHref("/forms", "/dashboard", { formId: null, section: undefined })).toBe("/forms");
-    });
-
-    it("lets the live url beat the memory", () => {
-      // Already inside a builder, the url is where the creator is; the memory may be older.
-      expect(
-        navHref("/forms", "/forms/form-b/preview", { formId: "form-a", section: "settings" }),
-      ).toBe("/forms/form-b/preview");
+    it("ignores the flag entirely while inside a builder", () => {
+      // The url is where the creator is, so it decides — including `preview`, which is never
+      // remembered, and a form the flag has nothing to do with.
+      expect(navHref("/forms", "/forms/form-b/preview", builder, false)).toBe(
+        "/forms/form-b/preview",
+      );
     });
   });
 });

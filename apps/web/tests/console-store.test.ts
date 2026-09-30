@@ -16,6 +16,7 @@ describe("useConsoleStore", () => {
       lastFormId: null,
       lastSectionByForm: {},
       lastBuilderFormId: null,
+      resumeBuilder: false,
       responsesFilters: INITIAL_RESPONSE_FILTERS,
       responsesPage: 1,
     });
@@ -137,7 +138,11 @@ describe("rememberSection", () => {
  */
 describe("rememberBuilder", () => {
   beforeEach(() => {
-    useConsoleStore.setState({ lastSectionByForm: {}, lastBuilderFormId: null });
+    useConsoleStore.setState({
+      lastSectionByForm: {},
+      lastBuilderFormId: null,
+      resumeBuilder: false,
+    });
   });
 
   it("records the form and the section in one go", () => {
@@ -189,5 +194,81 @@ describe("rememberBuilder", () => {
     expect(after.lastBuilderFormId).toBe("form-a");
     expect(after.lastSectionByForm["form-a"]).toBe("build");
     expect(after.lastSectionByForm["form-b"]).toBe("build");
+  });
+});
+
+/**
+ * The flag that decides whether the sidebar resumes the builder or shows the list.
+ *
+ * It is stored rather than inferred because the back button has to be able to say "I am done",
+ * and nothing about the page after leaving can distinguish that from having wandered off.
+ */
+describe("resumeBuilder", () => {
+  beforeEach(() => {
+    useConsoleStore.setState({
+      lastSectionByForm: {},
+      lastBuilderFormId: null,
+      resumeBuilder: false,
+    });
+  });
+
+  it("starts off, so a first-time visitor gets the list", () => {
+    expect(useConsoleStore.getState().resumeBuilder).toBe(false);
+  });
+
+  it("is raised by opening a builder", () => {
+    useConsoleStore.getState().rememberBuilder("form-a", "share");
+    expect(useConsoleStore.getState().resumeBuilder).toBe(true);
+  });
+
+  it("is raised again by revisiting the same form in the same section", () => {
+    // Otherwise the back button would be permanent: once cleared, the flag could never come
+    // back, because the form and section would not have changed either.
+    const store = useConsoleStore.getState();
+    store.rememberBuilder("form-a", "share");
+    store.leaveBuilder();
+    store.rememberBuilder("form-a", "share");
+
+    expect(useConsoleStore.getState().resumeBuilder).toBe(true);
+  });
+
+  it("is lowered by leaving deliberately, and only then", () => {
+    useConsoleStore.getState().rememberBuilder("form-a", "share");
+    useConsoleStore.getState().leaveBuilder();
+
+    expect(useConsoleStore.getState().resumeBuilder).toBe(false);
+  });
+
+  it("keeps the form and its section when lowered", () => {
+    // The flag withdraws the automatic redirect, not the memory: the list's card still opens
+    // this form at this section, so the way back is one click rather than four.
+    const store = useConsoleStore.getState();
+    store.rememberBuilder("form-a", "settings");
+    store.leaveBuilder();
+
+    const after = useConsoleStore.getState();
+    expect(after.lastBuilderFormId).toBe("form-a");
+    expect(after.lastSectionByForm["form-a"]).toBe("settings");
+  });
+
+  it("does not disturb the form Responses and Analytics share", () => {
+    // That is a different question — which form am I reading — and answering it here would
+    // reset someone's filters and page as a side effect of leaving a builder.
+    const store = useConsoleStore.getState();
+    store.setLastForm("form-b");
+    store.setResponsesPage(3);
+    store.rememberBuilder("form-a", "share");
+    store.leaveBuilder();
+
+    const after = useConsoleStore.getState();
+    expect(after.lastFormId).toBe("form-b");
+    expect(after.responsesPage).toBe(3);
+  });
+
+  it("survives being called when already lowered", () => {
+    useConsoleStore.getState().leaveBuilder();
+    useConsoleStore.getState().leaveBuilder();
+
+    expect(useConsoleStore.getState().resumeBuilder).toBe(false);
   });
 });

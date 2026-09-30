@@ -65,31 +65,33 @@ export const builderLocation = (pathname: string): BuilderLocation | null => {
 /**
  * Where a sidebar nav item should point, which is not always its own url.
  *
- * Forms resumes the builder rather than opening the list. A hardcoded `/forms` threw that
- * away: clicking Forms from the middle of editing a form dumped them on the list and lost the
- * section they had open, so the only way back to it was a card click and a guess about which.
+ * Forms resumes the builder rather than opening the list, so that stepping away from a form and
+ * back does not cost the section you were in. Whether it does is a *stated* decision rather
+ * than a fact about the current page:
  *
- * Two sources, in order. The live URL wins when the creator is already inside a builder,
- * because it is where they are right now and it covers segments like `preview` that are
- * deliberately never remembered. Failing that, the remembered form answers — which is what
- * makes the link work from Responses and Analytics too, where the URL says nothing about
- * which form was being edited.
+ *   - inside a builder, the url decides — including `preview`, never remembered
+ *   - the resume flag is on and a form is remembered, so the creator is still working on one
+ *   - otherwise, the list
  *
- * Every other item navigates to itself. With no builder to resume, `/forms` still resolves to
- * the list, and the builder header carries a back button for leaving a builder deliberately.
+ * The flag is the part that matters. Resuming merely because a builder had been visited at
+ * some point made the back button pointless: it navigated to `/forms` correctly, and then the
+ * next click on Forms dragged the creator straight back into the builder they had just left.
+ * The back button now clears the flag, which is the only way to say "I am done with this".
+ *
+ * Every other item navigates to itself.
  */
-export const navHref = (url: string, pathname: string, remembered?: RememberedBuilder): string => {
+export const navHref = (
+  url: string,
+  pathname: string,
+  remembered?: RememberedBuilder,
+  resume = false,
+): string => {
   if (url !== "/forms") return url;
 
-  // Already inside a builder: the URL is the truth, including a section like `preview` that
-  // is never remembered. This is the common case and needs no store at all.
   const here = builderLocation(pathname);
   if (here) return `/forms/${here.formId}/${here.segment}`;
 
-  // Stepped away from the builder entirely, by way of Responses or Analytics. The remembered
-  // form is the only thing left saying where they were, and reading the section the same way
-  // is what keeps this consistent with the forms list.
-  if (remembered?.formId) return resolveBuilderHref(remembered.formId, remembered.section);
+  if (resume && remembered?.formId) return resolveBuilderHref(remembered.formId, remembered.section);
 
   return url;
 };

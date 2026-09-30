@@ -20,6 +20,7 @@ import { useGetForm, useGetFormSettings, useSetFormStatus } from "~/hooks/api/fo
 import { trpc } from "~/trpc/client";
 import { useBuilderStore } from "~/stores/builder-store";
 import { useAutosave } from "~/stores/builder-store/use-autosave";
+import { useConsoleStore } from "~/stores/console-store";
 
 /**
  * The chrome every builder section shares: identity, live save state and the publish
@@ -94,6 +95,7 @@ export function BuilderChrome({
   const utils = trpc.useUtils();
   const hydrate = useBuilderStore((state) => state.hydrate);
   const applyStatus = useBuilderStore((state) => state.applyStatus);
+  const leaveBuilder = useConsoleStore((state) => state.leaveBuilder);
   const definition = useBuilderStore((state) => state.definition);
   const saveState = useBuilderStore((state) => state.saveState);
 
@@ -157,7 +159,19 @@ export function BuilderChrome({
         <p className="text-muted-foreground max-w-sm text-sm">
           {error?.message ?? "It may have been deleted, or it is not yours."}
         </p>
-        <Button variant="outline" onClick={() => router.push("/forms")}>
+        <Button
+          variant="outline"
+          onClick={() => {
+            /*
+             * Also here, and for a stronger reason. This form is gone, so a resume flag left
+             * set would keep pointing the sidebar's Forms link at a builder that cannot load —
+             * and this screen is where that link would land, so the creator could not click
+             * their way out of it.
+             */
+            leaveBuilder();
+            router.push("/forms");
+          }}
+        >
           Back to forms
         </Button>
       </div>
@@ -206,6 +220,16 @@ export function BuilderChrome({
               }
 
               event.preventDefault();
+
+              /*
+               * Cleared before the flush, not after: the flush is awaited, and if it rejects the
+               * navigation still happens — so clearing afterwards would leave the flag set on
+               * exactly the path where the creator was told nothing worked.
+               *
+               * A deliberate exit is the one thing that should stop the sidebar resuming, and
+               * this is the only place a creator can say so from inside a builder.
+               */
+              leaveBuilder();
               void flushAutosave().finally(() => router.push("/forms"));
             }}
           >
