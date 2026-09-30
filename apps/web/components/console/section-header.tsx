@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { SquarePenIcon } from "lucide-react";
 
 import { StatusChip } from "~/components/builder/builder-chrome";
+import { BuilderLink } from "~/components/builder/builder-link";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { useGetForm } from "~/hooks/api/form";
@@ -49,10 +49,12 @@ export function SectionHeader({
 
       {formId ? (
         <Button asChild variant="outline" className="gap-2">
-          <Link href={href}>
+          {/* Also a `BuilderLink`: this is entering the builder from outside it, so the store's
+              copy of a possibly different form should not be what greets the creator. */}
+          <BuilderLink formId={formId} href={href}>
             <SquarePenIcon className="size-4" />
             Open builder
-          </Link>
+          </BuilderLink>
         </Button>
       ) : (
         <Skeleton className="h-9 w-36" />

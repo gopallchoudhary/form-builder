@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import {
   FileTextIcon,
   ArrowRightIcon,
@@ -23,6 +22,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useListForms } from "~/hooks/api/form";
 import { publicFormUrl } from "~/lib/share-url";
 import { cn } from "~/lib/utils";
+import { BuilderLink } from "~/components/builder/builder-link";
 import { resolveBuilderHref } from "~/lib/builder-href";
 import { useConsoleStore } from "~/stores/console-store";
 import { CreateFormModal } from "~/components/console/create-form-modal";
@@ -145,7 +145,14 @@ function FormCard({
           )}
         </Button>
 
-        <Link href={href} id={`open-form-${id}`} className="ml-auto">
+        {/* `BuilderLink`, not a bare `Link`: entering a builder from the list is a fresh start,
+            and the store still holds the last visit of whichever form was open before. */}
+        <BuilderLink
+          formId={id}
+          href={href}
+          className="ml-auto"
+          prefetch={false}
+        >
           <Button
             size="sm"
             variant="outline"
@@ -154,7 +161,7 @@ function FormCard({
             Open Builder
             <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
           </Button>
-        </Link>
+        </BuilderLink>
       </CardFooter>
     </Card>
   );

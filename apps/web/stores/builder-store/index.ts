@@ -60,6 +60,23 @@ export interface BuilderState {
    * everywhere downstream. This is the one place the two shapes meet.
    */
   hydrate: (definition: BuilderDefinition) => void;
+  /**
+   * Empties the store, so the next form mounted re-hydrates from the server.
+   *
+   * The store is module-level and so outlives any page that reads it, which is what stops
+   * `BuilderChrome` re-hydrating a form it already holds — and that guard is deliberate,
+   * because re-hydrating is destructive: it replaces the definition *and* the baseline and
+   * clears both history stacks.
+   *
+   * So the survival that protects a form mid-edit also means a form re-entered from the list
+   * would otherwise show whatever the last visit left behind, even after the form had been
+   * changed or deleted elsewhere. Calling this on the way into a builder is what separates
+   * "still working on it" from "starting it fresh".
+   *
+   * `activeTab` is deliberately untouched: it is a UI preference, not part of the definition,
+   * and there is nothing to rehydrate it from.
+   */
+  reset: () => void;
   setTab: (tab: BuilderTab) => void;
   selectQuestion: (questionId: string | null) => void;
   markSaving: () => void;
@@ -167,6 +184,16 @@ export const useBuilderStore = create<BuilderState>()((set, get) => {
         future: [],
       });
     },
+
+    reset: () =>
+      set({
+        definition: null,
+        baseline: null,
+        selectedQuestionId: null,
+        saveState: "idle",
+        past: [],
+        future: [],
+      }),
 
     setTab: (activeTab) => set({ activeTab }),
     selectQuestion: (selectedQuestionId) => set({ selectedQuestionId }),

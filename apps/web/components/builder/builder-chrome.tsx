@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -124,23 +124,27 @@ export function BuilderChrome({
   };
 
   /**
-   * Hydrate once per mount, and again only when the form itself changes.
+   * Re-hydrate only when the store is not already holding this form.
    *
-   * Keyed on the id rather than on `form` alone, because the query refetches after a save
-   * and re-hydrating then would discard edits typed since. But keying on the id *alone* was
-   * too strong in the other direction: the store outlives the page, so reopening a form the
-   * creator had already loaded matched `definition?.id === form.id`, skipped hydration
-   * entirely, and rendered whatever the previous visit left behind — stale questions, a
-   * stale status, and a stale undo stack, even after the form had been changed or deleted
-   * elsewhere. Tracking the id we hydrated for, once per mount, separates the two cases.
+   * The test reads the *store*, not local component state, and that is load-bearing. This
+   * component is mounted separately by each builder page, so Build → Settings → Share
+   * unmounts it and mounts a fresh instance. An earlier version tracked the hydrated id in a
+   * `useRef`, which reset on every one of those remounts, so each tab change re-hydrated —
+   * and `hydrate` is destructive: it replaces the definition *and* the baseline and clears
+   * both history stacks. Combined with `staleTime: Infinity` on `getForm`, that rolled the
+   * store back to the last *fetched* version on every tab switch, so edits vanished from the
+   * screen while the autosave had already persisted them. A refresh refetched and the change
+   * reappeared, which is what made it look like the save needed a reload.
+   *
+   * The store is module-level, so it outlives the component and the id comparison holds
+   * across remounts. The cost is that a form re-entered without a reset shows the last
+   * visit's state; `reset()` on the way in from the forms list is what covers that.
    */
-  const hydratedFor = useRef<string | null>(null);
   useEffect(() => {
     if (!form) return;
-    if (hydratedFor.current === form.id) return;
-    hydratedFor.current = form.id;
+    if (definition?.id === form.id) return;
     hydrate(form);
-  }, [form, hydrate]);
+  }, [form, definition?.id, hydrate]);
 
   if (isLoading || !definition) {
     return (
