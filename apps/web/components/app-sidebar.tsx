@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { useSignOut, useUser } from "~/hooks/api/auth";
 import { isNavItemActive } from "~/lib/nav";
 import { navHref } from "~/lib/builder-href";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { useConsoleStore } from "~/stores/console-store";
 
 /**
@@ -136,11 +137,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
 
         {/*
-          A `SidebarMenuButton` rather than a plain button, so it collapses the same way the
-          navigation above it does: icon only, and a tooltip carrying the label that the
-          collapsed width has no room for. Without the tooltip the text would just be gone,
-          which leaves an unlabelled icon in the footer.
+          Theme before sign-out, both as `SidebarMenuButton`s so they collapse the way the
+          navigation above does: icon only, with a tooltip carrying the label the collapsed
+          width has no room for. Plain buttons here would lose their text entirely in the rail
+          and leave two unlabelled icons stacked on each other.
         */}
+        <ThemeToggle />
+
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

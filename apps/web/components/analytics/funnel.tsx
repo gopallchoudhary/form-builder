@@ -88,7 +88,7 @@ function DropOff({ next, data }: { next: "starts" | "completions"; data: FunnelD
         "flex items-center gap-1.5 py-1.5 pl-1 text-xs",
         // A step that keeps almost nobody is the one to fix, so it is called out rather
         // than left for the reader to compute.
-        lost > 0 && rate < 0.5 ? "text-[#b86700]" : "text-muted-foreground",
+        lost > 0 && rate < 0.5 ? "text-warning-foreground" : "text-muted-foreground",
       )}
     >
       <span aria-hidden className="text-muted-foreground/50">

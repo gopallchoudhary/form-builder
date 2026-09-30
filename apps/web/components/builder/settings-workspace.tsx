@@ -184,7 +184,9 @@ export function SettingsWorkspace() {
                     className={[
                       "focus-visible:ring-ring flex w-full flex-col gap-1.5 rounded-xl border-2 bg-card p-2 text-left transition-colors",
                       "focus-visible:ring-2 focus-visible:outline-none",
-                      selected ? "border-[#0e0f0c]" : "border-transparent hover:border-border",
+                      // `border-primary` for the same reason as the question card's ring:
+                      // near-black ink marked the selected swatch and vanished against a dark card.
+                      selected ? "border-primary" : "border-transparent hover:border-border",
                     ].join(" ")}
                   >
                     <ThemeThumbnail themeKey={key} />

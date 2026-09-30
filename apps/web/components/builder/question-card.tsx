@@ -66,9 +66,13 @@ export function QuestionCard({ question }: { question: QuestionDefinition }) {
       style={{ transform: CSS.Transform.toString(transform), transition }}
       className={cn(
         "group relative rounded-xl bg-card p-5",
-        // Elevation is surface contrast, not shadow: a white card on the sage canvas.
+        // Elevation is surface contrast, not shadow: a card on the canvas beside it.
+        //
+        // `ring-primary` for selection, not the near-black ink this used to hardcode. Ink was
+        // chosen against a white card and is invisible on a near-black one, so in the dark
+        // theme the selected question carried no marker at all. The lime is legible on either.
         "ring-1 ring-transparent transition-shadow",
-        isSelected ? "ring-[#0e0f0c]" : "hover:ring-border",
+        isSelected ? "ring-primary" : "hover:ring-border",
         isDragging && "z-10 opacity-80 ring-2",
       )}
     >

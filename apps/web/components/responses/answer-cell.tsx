@@ -131,7 +131,7 @@ export function AnswerCell({
               aria-hidden
               className={[
                 "size-3",
-                point <= value ? "fill-[#9fe870] text-[#2ead4b]" : "text-muted-foreground/25",
+                point <= value ? "fill-primary text-positive" : "text-muted-foreground/25",
               ].join(" ")}
             />
           ))}
@@ -149,7 +149,9 @@ export function AnswerCell({
       <span
         className={[
           "rounded-pill px-2 py-0.5 text-xs font-medium",
-          saidYes ? "bg-[#e2f6d5] text-[#054d28]" : "bg-muted text-muted-foreground",
+          saidYes
+            ? "bg-positive-subtle text-positive-foreground"
+            : "bg-muted text-muted-foreground",
         ].join(" ")}
       >
         {saidYes ? "Yes" : "No"}

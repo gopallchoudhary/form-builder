@@ -330,7 +330,7 @@ export function FormRuntime({
       readOnly={boot !== "ready"}
     >
       {boot === "error" && (
-        <p role="alert" className="text-sm font-medium text-[#d03238]">
+        <p role="alert" className="text-sm font-medium text-destructive">
           This form could not be opened. Try reloading the page.
         </p>
       )}
@@ -344,7 +344,7 @@ export function FormRuntime({
       )}
 
       {submitState === "error" && (
-        <p role="alert" className="text-sm font-medium text-[#d03238]">
+        <p role="alert" className="text-sm font-medium text-destructive">
           Your answers could not be submitted — the form may have closed or filled up while
           you were answering. Try again.
         </p>

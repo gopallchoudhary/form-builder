@@ -66,7 +66,7 @@ export function PasswordGate({
         />
 
         {message && (
-          <p id="form-password-error" role="alert" className="mt-2 text-sm font-medium text-[#d03238]">
+          <p id="form-password-error" role="alert" className="mt-2 text-sm font-medium text-destructive">
             {message}
           </p>
         )}

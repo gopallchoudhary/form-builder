@@ -40,6 +40,12 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-positive: var(--positive);
+  --color-positive-foreground: var(--positive-foreground);
+  --color-positive-subtle: var(--positive-subtle);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -115,6 +121,24 @@
   --chart-3: #ffc091; /* accent orange */
   --chart-4: #2ead4b; /* positive */
   --chart-5: #ffd11a; /* warning */
+  /*
+   * Status semantics, as a tinted surface plus its readable text.
+   *
+   * These exist because the status pills and "Saved" ticks were carrying hand-written hexes
+   * built for a white card — pale green on white. Pale green on a near-black card is a
+   * different colour, not the same colour in the dark, so a theme toggle alone could not fix
+   * them; they need a value per theme. `--positive-subtle` is the pill's fill and
+   * `--positive-foreground` its text, which is why they are a pair and not one colour.
+   *
+   * Distinct from `--chart-4`/`--chart-5`, which DESIGN.md reserves for series: the brand lime
+   * is banned as a series colour and success is always `positive`.
+   */
+  --positive: #2ead4b;
+  --positive-foreground: #054d28;
+  --positive-subtle: #e2f6d5;
+  --warning: #b86700;
+  --warning-foreground: #8a4e00;
+  --warning-subtle: #fbf0e4;
   --sidebar: #ffffff;
   --sidebar-foreground: #0e0f0c;
   --sidebar-primary: #0e0f0c; /* the sidebar's selected row is ink, keeping lime for one action */
@@ -150,6 +174,17 @@
   --chart-3: #ffc091;
   --chart-4: #2ead4b;
   --chart-5: #ffd11a;
+  /*
+   * Dark counterparts of the status semantics. The pale fills become deep, desaturated
+   * versions of their own hue — a tint near the canvas, not a tint near white — and the text
+   * moves to the light end, so a pill reads the same way here as it does in `:root`.
+   */
+  --positive: #4cc264;
+  --positive-foreground: #cdffad;
+  --positive-subtle: #1e2b19;
+  --warning: #ffc091;
+  --warning-foreground: #ffc091;
+  --warning-subtle: #2e2417;
   --sidebar: #1a1c18;
   --sidebar-foreground: #e8ebe6;
   --sidebar-primary: #9fe870;

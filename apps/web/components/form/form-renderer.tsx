@@ -215,7 +215,7 @@ function Question({
       </div>
 
       {hasError && (
-        <p id={errorId} role="alert" className="mt-2 text-sm font-medium text-[#d03238]">
+        <p id={errorId} role="alert" className="mt-2 text-sm font-medium text-destructive">
           {error}
         </p>
       )}

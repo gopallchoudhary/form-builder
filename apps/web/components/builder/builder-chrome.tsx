@@ -33,8 +33,8 @@ import { useConsoleStore } from "~/stores/console-store";
 export function StatusChip({ status }: { status: "DRAFT" | "PUBLISHED" | "CLOSED" }) {
   if (status === "PUBLISHED") {
     return (
-      <Badge className="gap-1.5 rounded-pill bg-[#e2f6d5] text-[#054d28]">
-        <span className="size-1.5 rounded-pill bg-[#2ead4b]" />
+      <Badge className="gap-1.5 rounded-pill bg-positive-subtle text-positive-foreground">
+        <span className="size-1.5 rounded-pill bg-positive" />
         Live
       </Badge>
     );
@@ -66,7 +66,7 @@ function SaveState({ state }: { state: "idle" | "saving" | "saved" | "error" }) 
   if (state === "saved") {
     return (
       <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
-        <CheckIcon className="size-3 text-[#2ead4b]" />
+        <CheckIcon className="size-3 text-positive" />
         Saved
       </span>
     );
@@ -295,7 +295,10 @@ export function BuilderChrome({
       {publishFailed && (
         <p
           role="alert"
-          className="border-b border-[#d03238]/30 bg-[#d03238]/10 px-6 py-2 text-sm text-[#a7000d]"
+          // `--destructive` rather than three hand-tuned hexes: `#a7000d` over `#d03238` at 10%
+          // is a dark red on pale red, which only reads against a light page. The token is
+          // lightened in `.dark`, so the same classes hold on either canvas.
+          className="border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive"
         >
           {publishError?.message ?? "The form could not be published."}
         </p>

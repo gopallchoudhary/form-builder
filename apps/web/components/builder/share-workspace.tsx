@@ -99,12 +99,12 @@ export function ShareWorkspace() {
               onClick={copy}
               disabled={!shareUrl}
             >
-              {copied ? <CheckIcon className="text-[#2ead4b]" /> : <CopyIcon />}
+              {copied ? <CheckIcon className="text-positive" /> : <CopyIcon />}
             </Button>
           </div>
 
           {!isLive && (
-            <p className="text-sm font-medium text-[#b86700]">
+            <p className="text-sm font-medium text-warning-foreground">
               This form is {definition.status === "DRAFT" ? "a draft" : "closed"}, so the link
               will not accept responses yet.
             </p>

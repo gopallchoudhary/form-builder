@@ -37,9 +37,17 @@ export interface QuestionColumn {
   settings: unknown;
 }
 
+/*
+ * Status as tokens rather than the hexes that used to sit here.
+ *
+ * The old pair — pale green `#e2f6d5` on `#054d28` and `#b86700` — was chosen against a white
+ * card, so it could not survive a theme toggle: on a near-black card that pale green is a
+ * different colour rather than the same colour in the dark, and the amber lost its contrast.
+ * `--positive-subtle`/`--warning-subtle` carry a value per theme.
+ */
 const STATUS: Record<RowStatus, { label: string; className: string }> = {
-  COMPLETED: { label: "Complete", className: "bg-[#e2f6d5] text-[#054d28]" },
-  IN_PROGRESS: { label: "In progress", className: "bg-[#e2f6d5] text-[#b86700]" },
+  COMPLETED: { label: "Complete", className: "bg-positive-subtle text-positive-foreground" },
+  IN_PROGRESS: { label: "In progress", className: "bg-warning-subtle text-warning-foreground" },
   ABANDONED: { label: "Abandoned", className: "bg-muted text-muted-foreground" },
 };
 
@@ -113,8 +121,11 @@ export function ResponseTable({
           cells, and a canvas-soft row border. The eyebrow is the question's stable key —
           not decoration, but the column name an export will use.
         */}
-        <TableHeader className="bg-[#e8ebe6]">
-          <TableRow className="hover:bg-[#e8ebe6]">
+        {/* `#e8ebe6` was canvas-soft, which is `--muted` in both themes — the dark value is
+            `#1a1c18`. Same role, and it now follows the canvas instead of being a white-page
+            constant pasted into a component. */}
+        <TableHeader className="bg-muted">
+          <TableRow className="hover:bg-muted">
             <TableHead className="w-40 text-eyebrow font-mono">Response</TableHead>
             <TableHead className="w-28 text-eyebrow font-mono">Status</TableHead>
             <TableHead className="w-40 text-eyebrow font-mono">Started</TableHead>
@@ -143,7 +154,7 @@ export function ResponseTable({
             const status = STATUS[row.status];
 
             return (
-              <TableRow key={row.sessionId} className="border-[#e8ebe6]">
+              <TableRow key={row.sessionId} className="border-muted">
                 <TableCell className="font-mono text-xs text-muted-foreground">
                   {row.sessionId.slice(0, 8)}
                 </TableCell>

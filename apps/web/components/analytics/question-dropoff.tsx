@@ -63,7 +63,7 @@ export function QuestionDropOff({ rows }: { rows: DropOffRow[] }) {
                 <Bar
                   value={row.reached}
                   max={total}
-                  className="bg-[#38c8ff]"
+                  className="bg-chart-2"
                   title={`Reached by ${row.reached}`}
                 />
                 <Bar
@@ -75,7 +75,7 @@ export function QuestionDropOff({ rows }: { rows: DropOffRow[] }) {
               </div>
 
               {isWorst && (
-                <p className="mt-1 flex items-center gap-1 text-xs text-[#b86700]">
+                <p className="mt-1 flex items-center gap-1 text-xs text-warning-foreground">
                   <TrendingDownIcon className="size-3" />
                   {lost} reached it without answering
                 </p>
@@ -87,7 +87,7 @@ export function QuestionDropOff({ rows }: { rows: DropOffRow[] }) {
 
       <p className="text-muted-foreground mt-4 text-xs">
         <span className="mr-3 inline-flex items-center gap-1.5">
-          <span className="bg-[#38c8ff] inline-block size-2 rounded-pill" />
+          <span className="bg-chart-2 inline-block size-2 rounded-pill" />
           reached
         </span>
         <span className="inline-flex items-center gap-1.5">
@@ -134,7 +134,7 @@ function Panel({
   return (
     <section className="rounded-xl bg-card p-5 ring-1 ring-border">
       <h2 className="text-sm font-medium">{title}</h2>
-      {caption && <p className="mt-1 text-xs text-[#b86700]">{caption}</p>}
+      {caption && <p className="mt-1 text-xs text-warning-foreground">{caption}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
