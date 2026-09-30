@@ -60,6 +60,18 @@ export interface ConsoleState {
    */
   lastSectionByForm: Record<string, BuilderSection>;
 
+  /**
+   * The form whose builder was open most recently, so the sidebar can send someone back to it
+   * from anywhere in the console.
+   *
+   * Deliberately separate from `lastFormId`. That one answers "which form am I reading across
+   * all of them" and is shared by Responses and Analytics; this answers "which one was I
+   * editing". A creator who is reading responses for one form and editing another has both,
+   * and collapsing them into one id would make the sidebar resume whichever was touched last
+   * rather than whichever was meant.
+   */
+  lastBuilderFormId: string | null;
+
   responsesFilters: ResponseFilters;
   responsesPage: number;
 
@@ -69,6 +81,13 @@ export interface ConsoleState {
   setResponsesPage: (page: number) => void;
   /** Ignores `preview` and any unknown segment, so the map only ever holds real sections. */
   rememberSection: (formId: string, section: string) => void;
+  /**
+   * Record the builder currently on screen, as a form and a section together.
+   *
+   * One call rather than two, so `lastBuilderFormId` and the section it points at cannot be
+   * written out of step and leave the sidebar resuming a form at a section it was never on.
+   */
+  rememberBuilder: (formId: string, segment: string) => void;
 }
 
 export const useConsoleStore = create<ConsoleState>()(
@@ -76,6 +95,7 @@ export const useConsoleStore = create<ConsoleState>()(
     (set) => ({
       lastFormId: null,
       lastSectionByForm: {},
+      lastBuilderFormId: null,
       responsesFilters: INITIAL_RESPONSE_FILTERS,
       responsesPage: 1,
 
@@ -95,6 +115,27 @@ export const useConsoleStore = create<ConsoleState>()(
           // Immutable spread rather than mutation: the persist middleware compares by
           // reference, so writing into the existing object would skip the localStorage write.
           return { lastSectionByForm: { ...state.lastSectionByForm, [formId]: section } };
+        }),
+
+      rememberBuilder: (formId, segment) =>
+        set((state) => {
+          const section = isBuilderSection(segment) ? segment : null;
+
+          /*
+           * `preview` still counts as *being* in this form's builder — someone looking at it is
+           * working on that form — but it is not a section to be resumed to, so the remembered
+           * section is left holding whatever real section they had last. Moving between the
+           * real sections of a form still updates both, so resuming lands where they left.
+           */
+          if (!section && state.lastBuilderFormId === formId) return state;
+          if (section && state.lastBuilderFormId === formId && state.lastSectionByForm[formId] === section) {
+            return state;
+          }
+
+          return {
+            lastBuilderFormId: formId,
+            ...(section ? { lastSectionByForm: { ...state.lastSectionByForm, [formId]: section } } : {}),
+          };
         }),
     }),
     { name: "streamyst:console" },

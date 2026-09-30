@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeftIcon,
   CheckIcon,
   CloudIcon,
   Loader2Icon,
@@ -168,6 +169,50 @@ export function BuilderChrome({
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-4 py-3 sm:px-6">
+        {/*
+          The way out of the builder, and the only one that is a real escape.
+
+          The sidebar's Forms link resumes the builder rather than showing the list, which is
+          what makes coming back cheap but leaves "show me all my forms" with no obvious
+          target. This is that: one click, from every section, and it does not depend on
+          anything having been remembered.
+
+          `shrink-0` so it stays put on a narrow screen. The header wraps, and the title is
+          `flex-1`, so without this the button would wrap onto a line of its own and read as
+          an orphan rather than as part of the header.
+        */}
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground -ml-2 shrink-0"
+        >
+          <Link
+            href="/forms"
+            aria-label="Back to all forms"
+            onClick={(event) => {
+              // Same reasoning as the tab strip, and the same trap: the autosave is debounced,
+              // and a request started while the page unloads is aborted, so a creator who
+              // typed a question and left would lose it. A plain link would do exactly that.
+              if (
+                event.defaultPrevented ||
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey
+              ) {
+                return;
+              }
+
+              event.preventDefault();
+              void flushAutosave().finally(() => router.push("/forms"));
+            }}
+          >
+            <ArrowLeftIcon className="size-4" />
+          </Link>
+        </Button>
+
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-base font-semibold tracking-tight">
             {definition.title}

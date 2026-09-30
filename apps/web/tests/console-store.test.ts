@@ -15,6 +15,7 @@ describe("useConsoleStore", () => {
     useConsoleStore.setState({
       lastFormId: null,
       lastSectionByForm: {},
+      lastBuilderFormId: null,
       responsesFilters: INITIAL_RESPONSE_FILTERS,
       responsesPage: 1,
     });
@@ -128,5 +129,65 @@ describe("rememberSection", () => {
     const after = useConsoleStore.getState().lastSectionByForm;
     useConsoleStore.getState().rememberSection("form-a", "build");
     expect(useConsoleStore.getState().lastSectionByForm).toBe(after);
+  });
+});
+
+/**
+ * The builder the sidebar resumes: a form and a section recorded together.
+ */
+describe("rememberBuilder", () => {
+  beforeEach(() => {
+    useConsoleStore.setState({ lastSectionByForm: {}, lastBuilderFormId: null });
+  });
+
+  it("records the form and the section in one go", () => {
+    // Two separate writes could be interrupted between them, leaving the sidebar resuming a
+    // form at a section it was never on.
+    useConsoleStore.getState().rememberBuilder("form-a", "settings");
+
+    const after = useConsoleStore.getState();
+    expect(after.lastBuilderFormId).toBe("form-a");
+    expect(after.lastSectionByForm["form-a"]).toBe("settings");
+  });
+
+  it("remembers the form most recently opened, not the first", () => {
+    const store = useConsoleStore.getState();
+    store.rememberBuilder("form-a", "build");
+    store.rememberBuilder("form-b", "share");
+
+    expect(useConsoleStore.getState().lastBuilderFormId).toBe("form-b");
+  });
+
+  it("treats preview as being in the form without making it the section to return to", () => {
+    // Preview is read-only, so resuming into it would drop a creator somewhere they cannot
+    // type. But they *are* in that form, so leaving via the sidebar should not go elsewhere.
+    useConsoleStore.getState().rememberBuilder("form-a", "settings");
+    useConsoleStore.getState().rememberBuilder("form-a", "preview");
+
+    const after = useConsoleStore.getState();
+    expect(after.lastBuilderFormId).toBe("form-a");
+    expect(after.lastSectionByForm["form-a"]).toBe("settings");
+  });
+
+  it("ignores an unknown segment rather than storing it", () => {
+    // The segment comes from a URL, so it can be anything.
+    useConsoleStore.getState().rememberBuilder("form-a", "not-a-section");
+
+    const after = useConsoleStore.getState();
+    expect(after.lastBuilderFormId).toBe("form-a");
+    expect(after.lastSectionByForm["form-a"]).toBeUndefined();
+  });
+
+  it("moves the remembered form when a new one is opened, keeping the old one's section", () => {
+    // Each form's section is its own, so switching away and back returns to where it was.
+    const store = useConsoleStore.getState();
+    store.rememberBuilder("form-a", "settings");
+    store.rememberBuilder("form-b", "build");
+    store.rememberBuilder("form-a", "build");
+
+    const after = useConsoleStore.getState();
+    expect(after.lastBuilderFormId).toBe("form-a");
+    expect(after.lastSectionByForm["form-a"]).toBe("build");
+    expect(after.lastSectionByForm["form-b"]).toBe("build");
   });
 });

@@ -50,21 +50,22 @@ export function FormTabs({
   const [leaving, setLeaving] = useState<string | null>(null);
   const base = `/forms/${formId}`;
 
-  const rememberSection = useConsoleStore((state) => state.rememberSection);
+  const rememberBuilder = useConsoleStore((state) => state.rememberBuilder);
   const activeSegment = pathname.startsWith(`${base}/`)
     ? pathname.slice(base.length + 1).split("/")[0]
     : null;
 
   /*
-   * Record the open section so `/forms` can link back here instead of always to Build.
+   * Record the open builder so the sidebar can resume it — the form *and* the section, since
+   * resuming to the right form at the wrong section is no better than the list.
    *
    * Every `/forms/[formId]/*` page mounts this, so one effect covers all four. `preview` is
-   * filtered out inside `rememberSection` — it is read-only, and remembering it would drop
-   * someone who glanced at their form into a view they cannot type in.
+   * filtered inside `rememberBuilder`: it counts as being in the form, but it is never the
+   * section to come back to.
    */
   useEffect(() => {
-    if (activeSegment) rememberSection(formId, activeSegment);
-  }, [formId, activeSegment, rememberSection]);
+    if (activeSegment) rememberBuilder(formId, activeSegment);
+  }, [formId, activeSegment, rememberBuilder]);
 
   return (
     <nav

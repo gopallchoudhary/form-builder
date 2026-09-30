@@ -65,4 +65,42 @@ describe("navHref", () => {
     expect(navHref("/responses", "/forms/form-a/share")).toBe("/responses");
     expect(navHref("/analytics", "/forms/form-a/share")).toBe("/analytics");
   });
+
+  describe("once stepped away from the builder", () => {
+    // Responses and Analytics take a form in `?form=` and have no notion of a builder, so the
+    // url says nothing about which form was being edited. The remembered builder is the only
+    // thing that can answer, and without it Forms dumps a creator mid-project on the list.
+    it("resumes the remembered form and section", () => {
+      expect(
+        navHref("/forms", "/responses?form=form-a", { formId: "form-a", section: "settings" }),
+      ).toBe("/forms/form-a/settings");
+    });
+
+    it("prefers the remembered section over the form someone is reading", () => {
+      // `lastFormId` and `lastBuilderFormId` are deliberately separate: reading responses for
+      // one form while editing another is a normal thing to be doing.
+      expect(
+        navHref("/forms", "/responses?form=form-b", { formId: "form-a", section: "share" }),
+      ).toBe("/forms/form-a/share");
+    });
+
+    it("falls back to build for a remembered section that is not real", () => {
+      expect(
+        navHref("/forms", "/dashboard", { formId: "form-a", section: "nonsense" }),
+      ).toBe("/forms/form-a/build");
+    });
+
+    it("shows the list when no builder has been opened", () => {
+      // Otherwise Forms would have no list destination at all for a first-time creator.
+      expect(navHref("/forms", "/dashboard")).toBe("/forms");
+      expect(navHref("/forms", "/dashboard", { formId: null, section: undefined })).toBe("/forms");
+    });
+
+    it("lets the live url beat the memory", () => {
+      // Already inside a builder, the url is where the creator is; the memory may be older.
+      expect(
+        navHref("/forms", "/forms/form-b/preview", { formId: "form-a", section: "settings" }),
+      ).toBe("/forms/form-b/preview");
+    });
+  });
 });

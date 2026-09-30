@@ -17,6 +17,12 @@ import { isBuilderSection, type BuilderSection } from "~/stores/console-store";
 
 export const DEFAULT_SECTION: BuilderSection = "build";
 
+/** The builder a creator was last in, as far as a link is concerned. */
+export interface RememberedBuilder {
+  formId: string | null;
+  section: unknown;
+}
+
 /**
  * Resolve the href for opening a form, preferring the section the creator last had open.
  *
@@ -59,21 +65,31 @@ export const builderLocation = (pathname: string): BuilderLocation | null => {
 /**
  * Where a sidebar nav item should point, which is not always its own url.
  *
- * Forms goes back to the builder when the creator is already inside one. A hardcoded `/forms`
- * threw that away: clicking Forms from the middle of editing a form dumped them on the list,
- * and the section they had open was lost, so the only way back to it was a card click and a
- * guess about which one.
+ * Forms resumes the builder rather than opening the list. A hardcoded `/forms` threw that
+ * away: clicking Forms from the middle of editing a form dumped them on the list and lost the
+ * section they had open, so the only way back to it was a card click and a guess about which.
  *
- * The segment comes from the URL rather than from the remembered section, because the URL is
- * where the creator is right now and so is the better record of it — and it keeps `preview`
- * working as a destination without teaching it to the remembered-section store.
+ * Two sources, in order. The live URL wins when the creator is already inside a builder,
+ * because it is where they are right now and it covers segments like `preview` that are
+ * deliberately never remembered. Failing that, the remembered form answers — which is what
+ * makes the link work from Responses and Analytics too, where the URL says nothing about
+ * which form was being edited.
  *
- * Every other item navigates to itself, and `/forms` on its own still resolves to the list,
- * so the list stays reachable from anywhere outside a builder.
+ * Every other item navigates to itself. With no builder to resume, `/forms` still resolves to
+ * the list, and the builder header carries a back button for leaving a builder deliberately.
  */
-export const navHref = (url: string, pathname: string): string => {
+export const navHref = (url: string, pathname: string, remembered?: RememberedBuilder): string => {
   if (url !== "/forms") return url;
 
+  // Already inside a builder: the URL is the truth, including a section like `preview` that
+  // is never remembered. This is the common case and needs no store at all.
   const here = builderLocation(pathname);
-  return here ? `/forms/${here.formId}/${here.segment}` : url;
+  if (here) return `/forms/${here.formId}/${here.segment}`;
+
+  // Stepped away from the builder entirely, by way of Responses or Analytics. The remembered
+  // form is the only thing left saying where they were, and reading the section the same way
+  // is what keeps this consistent with the forms list.
+  if (remembered?.formId) return resolveBuilderHref(remembered.formId, remembered.section);
+
+  return url;
 };

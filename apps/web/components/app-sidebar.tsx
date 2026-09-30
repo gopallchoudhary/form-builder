@@ -25,6 +25,7 @@ import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { useSignOut, useUser } from "~/hooks/api/auth";
 import { isNavItemActive } from "~/lib/nav";
 import { navHref } from "~/lib/builder-href";
+import { useConsoleStore } from "~/stores/console-store";
 
 /**
  * The creator console's navigation.
@@ -60,6 +61,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const displayName = user?.fullName?.trim() || user?.email || "You";
   const initials = initialsOf(displayName);
 
+  /*
+   * The builder to resume, for the Forms link. Two narrow reads rather than the whole map,
+   * so switching sections in some *other* form does not re-render the sidebar.
+   */
+  const builderFormId = useConsoleStore((state) => state.lastBuilderFormId);
+  const builderSection = useConsoleStore((state) =>
+    builderFormId ? state.lastSectionByForm[builderFormId] : undefined,
+  );
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -88,7 +98,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             return (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                  <Link href={navHref(item.url, pathname)}>
+                  <Link href={navHref(item.url, pathname, { formId: builderFormId, section: builderSection })}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>
