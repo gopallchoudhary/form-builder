@@ -16,6 +16,7 @@ import {
   type RuntimeQuestion,
 } from "./runtime-logic";
 import { useSaveDraft, useStartSession, useSubmitForm } from "~/hooks/api/public";
+import { runWithRetries } from "~/lib/retry";
 import { useRunnerStore, type AnswerValue } from "~/stores/runner-store";
 
 /**
@@ -146,26 +147,41 @@ export function FormRuntime({
 
   // ── Boot ────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // A re-render with the same form must not start a second session.
+    // Set once a session is genuinely live, so a re-render cannot start a second one.
     if (bootedFor.current === form.slug) return;
-    bootedFor.current = form.slug;
 
     let cancelled = false;
+    const pending: ReturnType<typeof setTimeout>[] = [];
 
     const start = async () => {
       try {
         const device = readDeviceId();
         deviceId.current = device;
 
-        const session = await startSessionAsync({
-          slug: form.slug,
-          deviceId: device,
-          ...(unlockToken ? { unlockToken } : {}),
-        });
+        /*
+         * Retried, because a failed boot has no way to recover on its own. The respondent is
+         * left looking at a form that will not finish starting, and the only escape anyone
+         * knows is a manual refresh.
+         *
+         * Safe to repeat: `startSession` resumes an existing in-progress draft for the same
+         * device, so a retry after an unknown outcome continues the same session rather than
+         * creating a second one.
+         */
+        const session = await runWithRetries(() =>
+          startSessionAsync({
+            slug: form.slug,
+            deviceId: device,
+            ...(unlockToken ? { unlockToken } : {}),
+          }),
+        );
 
+        // Abandoned mid-flight — most often because `unlockToken` arrived and the effect ran
+        // again. The latch is deliberately left unset, so the next run starts a real session
+        // rather than early-returning on a session that never began.
         if (cancelled) return;
 
         if (session.alreadyCompleted) {
+          bootedFor.current = form.slug;
           setBoot("already-submitted");
           return;
         }
@@ -184,6 +200,7 @@ export function FormRuntime({
           }),
         });
 
+        bootedFor.current = form.slug;
         setBoot("ready");
       } catch {
         if (!cancelled) setBoot("error");
@@ -193,6 +210,8 @@ export function FormRuntime({
     void start();
     return () => {
       cancelled = true;
+      // A retry that outlives the component would land on a form nobody is filling.
+      for (const timer of pending) clearTimeout(timer);
     };
     // `questions` and `pages` are derived from `form` and stable per render of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps

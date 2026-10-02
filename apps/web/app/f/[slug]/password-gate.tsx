@@ -6,6 +6,15 @@ import { LockedScreen } from "~/components/form/form-states";
 import { useUnlockForm } from "~/hooks/api/public";
 
 /**
+ * Where the unlock token is kept for the life of the tab.
+ *
+ * Exported because it is written here and read back by `PublicFormShell` when it mounts —
+ * a reader and a writer agreeing on a literal string in two files is how one of them ends up
+ * orphaned.
+ */
+export const UNLOCK_STORAGE_KEY = (slug: string) => `streamyst:unlock:${slug}`;
+
+/**
  * The password prompt for a protected form.
  *
  * The API also sets the unlock token as a cookie, so this is a door and not a wall: a
@@ -38,8 +47,27 @@ export function PasswordGate({
         return;
       }
 
-      const token = result.unlockToken ?? "";
-      sessionStorage.setItem(`streamyst:unlock:${slug}`, token);
+      /*
+       * A success with no token is a protocol failure, not something to paper over.
+       *
+       * This used to fall back to `""`, which is falsy, so `PublicFormShell`'s check would
+       * take it for "still locked" and render the prompt again — clearing the field the
+       * respondent had just filled in, with nothing to say why. From their side that is
+       * indistinguishable from the form ignoring them.
+       */
+      const token = result.unlockToken;
+      if (!token) {
+        setMessage("That password worked but could not be saved. Try again.");
+        setPassword("");
+        return;
+      }
+
+      try {
+        window.sessionStorage.setItem(UNLOCK_STORAGE_KEY(slug), token);
+      } catch {
+        // Storage can be refused outright. The cookie still carries the unlock, so this only
+        // costs the prompt on a refresh, which is not worth failing the whole unlock over.
+      }
       onUnlocked(token);
     } catch {
       setMessage("Could not check that password. Try again.");
