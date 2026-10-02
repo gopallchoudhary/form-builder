@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { FormRuntime } from "~/components/form/form-runtime";
 import { FormStateScreen, type UnavailableReason } from "~/components/form/form-states";
 import { PublicFormShell } from "./public-form-shell";
-import { getCurrentFormBySlug } from "~/lib/public-form";
+import { decidePublicForm, getCurrentFormBySlug } from "~/lib/public-form";
 
 /**
  * Never cached.
@@ -53,18 +53,31 @@ export default async function PublicFormPage({
 }) {
   const { slug } = await params;
   const result = await getCurrentFormBySlug(slug);
+  const decision = decidePublicForm(result);
 
-  if (!result.ok) notFound();
+  /*
+   * `locked` is decided before "there is no form", and necessarily so: a protected form
+   * reports `form: null` because the definition is withheld until the password is right, which
+   * is the only reason it is null while the form itself is available. Testing for the missing
+   * definition first caught it, fell through to `reason ?? "NOT_FOUND"`, and told a respondent
+   * their live, published form did not exist.
+   */
+  switch (decision.kind) {
+    case "missing":
+      notFound();
+      break;
 
-  if (!result.form) {
-    return <FormStateScreen reason={(result.reason ?? "NOT_FOUND") as UnavailableReason} />;
+    case "unavailable":
+      return (
+        <FormStateScreen reason={(decision.reason ?? "NOT_FOUND") as UnavailableReason} />
+      );
+
+    case "locked":
+      // The theme is part of the definition, which is exactly what is being withheld, so the
+      // gate uses the default until the password is supplied.
+      return <PublicFormShell slug={slug} locked />;
+
+    case "form":
+      return <FormRuntime form={decision.form} />;
   }
-
-  if (result.locked) {
-    // The theme is part of the definition, which is exactly what is being withheld, so the
-    // gate uses the default until the password is supplied.
-    return <PublicFormShell slug={slug} locked />;
-  }
-
-  return <FormRuntime form={result.form} />;
 }

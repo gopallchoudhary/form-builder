@@ -40,3 +40,35 @@ export async function getCurrentFormBySlug(slug: string): Promise<PublicFormResu
     throw error;
   }
 }
+
+/**
+ * What the public route should render, worked out in one place.
+ *
+ * Extracted because the four outcomes are not interchangeable and getting the order wrong is
+ * invisible until a form is in an unusual state. A password-protected form reports
+ * `locked: true`, `form: null` and `reason: null` — available, just gated — so it matches
+ * "there is no form" as readily as it matches "there is a lock". A page that tested for the
+ * missing form first reported every protected form as deleted, and the lock branch could not
+ * run: `locked` is only ever true when `form` is null, which is exactly what the missing-form
+ * branch matches.
+ *
+ * A discriminated union makes that unrepresentable. Each case is checked once, the caller
+ * switches on `kind`, and no ordering mistake can turn a live form into a 404.
+ */
+export type PublicFormDecision =
+  | { kind: "missing" }
+  | { kind: "unavailable"; reason: string | null }
+  | { kind: "locked" }
+  | { kind: "form"; form: NonNullable<PublicFormOutput["form"]> };
+
+export function decidePublicForm(result: PublicFormResult): PublicFormDecision {
+  // A slug the API does not know at all, which is a 404 rather than a page.
+  if (!result.ok) return { kind: "missing" };
+
+  // Before the missing-form case, and necessarily so: a locked form has no definition yet.
+  if (result.locked) return { kind: "locked" };
+
+  if (!result.form) return { kind: "unavailable", reason: result.reason };
+
+  return { kind: "form", form: result.form };
+}
