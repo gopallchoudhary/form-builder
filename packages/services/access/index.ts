@@ -72,7 +72,7 @@ class AccessService {
     }
 
     const locked =
-      row.passwordHash !== null && !verifyUnlockToken(unlockToken, row.id);
+      row.passwordHash !== null && !verifyUnlockToken(unlockToken, row.id, row.passwordHash);
 
     // Until the password is supplied, the form itself is withheld.
     if (locked) {
@@ -94,14 +94,16 @@ class AccessService {
     if (!row) return { unlocked: false, message: "That password is not right" };
 
     if (row.passwordHash === null) {
-      return { unlocked: true, unlockToken: issueUnlockToken(row.id) };
+      // Bound to "no password", so setting one later revokes this token too rather than
+      // leaving an unlock that quietly carries access to a now-protected form.
+      return { unlocked: true, unlockToken: issueUnlockToken(row.id, null) };
     }
 
     if (!(await verifyPassword(password, row.passwordHash))) {
       return { unlocked: false, message: "That password is not right" };
     }
 
-    return { unlocked: true, unlockToken: issueUnlockToken(row.id) };
+    return { unlocked: true, unlockToken: issueUnlockToken(row.id, row.passwordHash) };
   }
 
   // ── Sessions ─────────────────────────────────────────────────────────────────
@@ -118,7 +120,7 @@ class AccessService {
       throw new ForbiddenError(availabilityMessage(availability));
     }
 
-    if (row.passwordHash !== null && !verifyUnlockToken(unlockToken, row.id)) {
+    if (row.passwordHash !== null && !verifyUnlockToken(unlockToken, row.id, row.passwordHash)) {
       throw new ForbiddenError("This form is password protected");
     }
 

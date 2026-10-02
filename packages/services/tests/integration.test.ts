@@ -332,6 +332,50 @@ describe.skipIf(!servicesAvailable)("services against a real database", () => {
         kind: "FORBIDDEN",
       });
     });
+
+    it("revokes an unlock when the password is rotated", async () => {
+      /*
+       * Why this matters: a password is normally rotated *because* the old one was seen by
+       * someone who should not have had it. If the old token kept working, rotating would
+       * change nothing for the people who most likely hold one.
+       */
+      const { slug, formId } = await publishedForm({ password: "open-sesame" });
+      const { unlockToken } = await access.unlock({ slug, password: "open-sesame" });
+
+      expect((await access.getPublicFormBySlug({ slug, unlockToken })).locked).toBe(false);
+
+      await harness.forms.setPassword(owner.id, { formId, password: "open-sesame-v2" });
+
+      // The stale token is now indistinguishable from a forged one.
+      const afterRotation = await access.getPublicFormBySlug({ slug, unlockToken });
+      expect(afterRotation.locked).toBe(true);
+      expect(afterRotation.form).toBeNull();
+
+      const oldPassword = await access.unlock({ slug, password: "open-sesame" });
+      expect(oldPassword.unlocked).toBe(false);
+
+      const newPassword = await access.unlock({ slug, password: "open-sesame-v2" });
+      expect(newPassword.unlocked).toBe(true);
+      expect(
+        (await access.getPublicFormBySlug({ slug, unlockToken: newPassword.unlockToken })).locked,
+      ).toBe(false);
+    });
+
+    it("revokes an unlock when a password is added to a form that was open", async () => {
+      /*
+       * The token everyone already holds, issued before the form was ever protected. A form
+       * with no password unlocks on any input at all, so the value here is irrelevant — the
+       * schema just wants something.
+       */
+      const { slug, formId } = await publishedForm();
+      const { unlockToken } = await access.unlock({ slug, password: "anything" });
+
+      expect((await access.getPublicFormBySlug({ slug, unlockToken })).locked).toBe(false);
+
+      await harness.forms.setPassword(owner.id, { formId, password: "open-sesame" });
+
+      expect((await access.getPublicFormBySlug({ slug, unlockToken })).locked).toBe(true);
+    });
   });
 
   // ── Drafts and resume ────────────────────────────────────────────────────────
