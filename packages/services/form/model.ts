@@ -55,12 +55,20 @@ export type UpdateFormSettingsInputType = z.input<typeof updateFormSettingsInput
 /**
  * Set or clear the shared form password. Passing null makes the form open to anyone
  * with the link. The value is hashed before it is stored.
+ *
+ * `null` is the only way to remove a password. An empty string is rejected rather than
+ * treated as "clear", because the two are easy to confuse at a call site and silently
+ * unprotecting a form is not a thing to do by accident.
+ *
+ * Eight characters, matching the account password and the hint the builder's dialog shows.
+ * Four was short enough to be worth guessing, which matters more here than for a login: this
+ * value is shared with respondents in an email or a chat, not chosen per person.
  */
 export const setFormPasswordInput = z.object({
   formId: z.string().min(1).describe("ID of the form"),
   password: z
     .string()
-    .min(4)
+    .min(8)
     .max(128)
     .nullable()
     .describe("New password, or null to remove the password"),

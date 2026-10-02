@@ -15,6 +15,7 @@ import { Label } from "~/components/ui/label";
 import { Separator } from "~/components/ui/separator";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
+import { PasswordDialog } from "~/components/builder/password-dialog";
 import { useGetFormSettings, useSetFormPassword } from "~/hooks/api/form";
 import { useBuilderStore } from "~/stores/builder-store";
 
@@ -91,12 +92,33 @@ export function SettingsWorkspace() {
   const { form: settings } = useGetFormSettings(formId);
   const { setFormPasswordAsync, status, isError, error } = useSetFormPassword();
 
-  const [password, setPassword] = useState("");
-  const [cleared, setCleared] = useState(false);
+  /*
+   * Turning the switch on used to set local state and return, so no password was ever sent:
+   * the hash stayed null, `passwordProtected` stayed false, and the switch snapped back off.
+   * Worse, the field that would have set the password was gated on `passwordProtected`, which
+   * meant the only way to reach it was to already have a password — so there was no way out.
+   *
+   * Now the switch opens a dialog and the mutation is what moves it. Nothing local pretends
+   * to be protected: `isProtected` is read from the server, so the switch reflects what is
+   * actually true even if a save fails.
+   */
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const isProtected = settings?.passwordProtected ?? false;
+
+  const savePassword = async (password: string) => {
+    await setFormPasswordAsync({ formId, password });
+    setDialogOpen(false);
+  };
+
+  // `null` and not `""`: the service treats a password as something to store, and only `null`
+  // as "remove it". An empty string failed validation, so switching this off used to error out
+  // and leave the form protected with no way to tell why.
+  const clearPassword = async () => {
+    await setFormPasswordAsync({ formId, password: null });
+  };
 
   if (!definition) return null;
 
-  const isProtected = settings?.passwordProtected ?? false;
   const apply = (patch: Parameters<typeof updateSettings>[0]) => updateSettings(patch);
 
   return (
@@ -210,47 +232,51 @@ export function SettingsWorkspace() {
             checked={isProtected}
             onChange={(checked) => {
               if (checked) {
-                setCleared(false);
+                // No password yet, so there is nothing to turn on. Ask for one first.
+                setDialogOpen(true);
                 return;
               }
-              // An empty password is how the service removes one.
-              setPassword("");
-              setCleared(true);
-              void setFormPasswordAsync({ formId, password: "" });
+              void clearPassword();
             }}
           />
 
           {isProtected && (
-            <Field>
-              <FieldLabel htmlFor="s-password-value">
-                {cleared ? "Set a new password" : "Change password"}
-              </FieldLabel>
-              <div className="flex gap-2">
-                <Input
-                  id="s-password-value"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
-                />
-                <Button
-                  disabled={status === "pending" || password.length < 1}
-                  onClick={async () => {
-                    await setFormPasswordAsync({ formId, password });
-                    setPassword("");
-                  }}
-                >
-                  {status === "pending" ? "Saving…" : "Set"}
-                </Button>
-              </div>
-              {isError && (
-                <p role="alert" className="text-destructive text-xs">
-                  {error?.message ?? "That password could not be set."}
-                </p>
-              )}
-            </Field>
+            <div className="flex flex-col gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                className="self-start"
+                disabled={status === "pending"}
+                onClick={() => setDialogOpen(true)}
+              >
+                Change password
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                The current password is not shown, and cannot be recovered. If it is lost, the
+                form has to be unprotected with a new one.
+              </p>
+            </div>
           )}
+
+          {/*
+            The error lives here rather than only in the dialog, because clearing is a switch
+            action with no dialog to carry it. A failure there leaves the form protected and the
+            switch on, which is correct but has to be visible somewhere or it looks like nothing
+            happened.
+          */}
+          {isError && !dialogOpen && (
+            <p role="alert" className="text-destructive text-xs">
+              {error?.message ?? "That password could not be changed."}
+            </p>
+          )}
+
+          <PasswordDialog
+            open={dialogOpen}
+            onOpenChange={setDialogOpen}
+            onSubmit={savePassword}
+            isPending={status === "pending"}
+            serverError={dialogOpen ? (error?.message ?? null) : null}
+          />
 
           <Flag
             id="s-one-per-device"

@@ -131,7 +131,7 @@ describe.skipIf(!servicesAvailable)("services against a real database", () => {
 
     it("returns the same error type for a wrong password and a missing form", async () => {
       const { id: formId } = await harness.forms.createForm(owner.id, { title: "Secret" });
-      await harness.forms.setPassword(owner.id, { formId, password: "letmein" });
+      await harness.forms.setPassword(owner.id, { formId, password: "let-me-in" });
 
       const wrongPassword = await access.unlock({ slug: "does-not-exist", password: "x" });
       const realForm = await harness.forms.getFormById(owner.id, formId);
