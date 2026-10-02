@@ -87,7 +87,22 @@ export const publicRouter = router({
     })
     .input(startSessionInputModel)
     .output(startSessionOutputSchema)
-    .mutation(({ input }) => accessService.startSession(input)),
+    /*
+     * The unlock cookie is the fallback here for the same reason it is on `getFormBySlug`:
+     * the token in the body only exists for a caller holding one in client state, which is
+     * true on the way in through the password prompt and false on every later load.
+     *
+     * Without this, a respondent who unlocked a form could answer nothing at all after the
+     * first paint — the server component reads the cookie, sees an unlocked form, and renders
+     * it, but the client then asked to start a session with no token and was refused. Reading
+     * the form and starting a session have to agree on who is unlocked, or the form appears
+     * and then refuses to be filled in.
+     */
+    .mutation(({ input, ctx }) => {
+      const unlockToken = input.unlockToken ?? getFormUnlockCookie(ctx, input.slug);
+
+      return accessService.startSession({ ...input, unlockToken });
+    }),
 
   getSession: publicProcedure
     .meta({

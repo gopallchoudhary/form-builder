@@ -539,6 +539,80 @@ describe.skipIf(!available)("the HTTP API", () => {
       expect(unlocked.body.form.questions).toHaveLength(1);
     });
 
+    it("starts a session on the cookie alone, with no token in the body", async () => {
+      /*
+       * The shape of a reload.
+       *
+       * The respondent unlocked once, so the browser holds the cookie. On the next server
+       * render the API reads it, sees an unlocked form, and the form is served — but the
+       * client component then boots with nothing in client state and asks to start a session
+       * with no token. If `startSession` does not read the cookie as well, the two disagree:
+       * the form renders and then refuses to be filled in, which is what a respondent sees.
+       *
+       * Deliberately no `unlockToken` in the body, because that is the whole point.
+       */
+      const user = await signUp();
+      const created = await request(app as never)
+        .post("/api/form/createForm")
+        .set(auth(user.cookie))
+        .send({ title: "Cookie only" });
+      await request(app as never)
+        .post("/api/form/question/createQuestion")
+        .set(auth(user.cookie))
+        .send({ formId: created.body.id, kind: "SHORT_TEXT", label: "Name" });
+      await request(app as never)
+        .post("/api/form/setFormPassword")
+        .set(auth(user.cookie))
+        .send({ formId: created.body.id, password: "open-sesame" });
+      await request(app as never)
+        .post("/api/form/setFormStatus")
+        .set(auth(user.cookie))
+        .send({ formId: created.body.id, status: "PUBLISHED" });
+
+      const unlocked = await request(app as never)
+        .post("/api/public/form/unlockForm")
+        .send({ slug: created.body.slug, password: "open-sesame" });
+      expect(unlocked.body.unlocked).toBe(true);
+
+      const unlockCookie = (unlocked.headers["set-cookie"] as unknown as string[]).find((entry) =>
+        entry.startsWith("form-unlock-"),
+      );
+      expect(unlockCookie, "unlocking should set the cookie the reload depends on").toBeTruthy();
+      const cookieHeader = unlockCookie!.split(";")[0]!;
+
+      const started = await request(app as never)
+        .post("/api/public/form/startSession")
+        .set({ Cookie: cookieHeader })
+        .send({ slug: created.body.slug, deviceId: "00000000-0000-4000-8000-00000000bb01" });
+
+      expect(started.status).toBe(200);
+      expect(started.body.sessionId).toBeTruthy();
+    });
+
+    it("still refuses a session without the cookie or a token", async () => {
+      // The other half of the contract: reading a cookie must not become a way around the
+      // password. An unlocked cookie is the only thing that may stand in for the token.
+      const user = await signUp();
+      const created = await request(app as never)
+        .post("/api/form/createForm")
+        .set(auth(user.cookie))
+        .send({ title: "Still locked" });
+      await request(app as never)
+        .post("/api/form/setFormPassword")
+        .set(auth(user.cookie))
+        .send({ formId: created.body.id, password: "open-sesame" });
+      await request(app as never)
+        .post("/api/form/setFormStatus")
+        .set(auth(user.cookie))
+        .send({ formId: created.body.id, status: "PUBLISHED" });
+
+      const started = await request(app as never)
+        .post("/api/public/form/startSession")
+        .send({ slug: created.body.slug, deviceId: "00000000-0000-4000-8000-00000000bb02" });
+
+      expect(started.status).toBe(403);
+    });
+
     it("runs a whole response through the public API", async () => {
       const user = await signUp();
       const form = await publishedForm(user.cookie);
