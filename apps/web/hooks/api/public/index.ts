@@ -41,3 +41,30 @@ export const useSubmitForm = () => {
     },
   });
 };
+
+//, a poll for voters: meta always, tally only once this device voted
+export const usePublicPoll = (slug: string | null, deviceId: string | null) => {
+  const { data: poll, isLoading, isFetching, isError, error, refetch } =
+    trpc.poll.getPollBySlug.useQuery(
+      { slug: slug ?? "", ...(deviceId ? { deviceId } : {}) },
+      { enabled: !!slug },
+    );
+
+  return { poll, isLoading, isFetching, isError, error, refetch };
+};
+
+//, vote or move a vote; the tally refreshes itself from the broadcast
+export const useCastVote = () => {
+  const utils = trpc.useUtils();
+
+  const { mutateAsync: castVoteAsync, status, isError, error } =
+    trpc.poll.castVote.useMutation({
+      onSuccess: async () => {
+        // The broadcast usually beats this refetch, and that is fine: both converge on the
+        // same tally, and the refetch is what covers a missed broadcast.
+        await utils.poll.getPollBySlug.invalidate();
+      },
+    });
+
+  return { castVoteAsync, status, isError, error };
+};

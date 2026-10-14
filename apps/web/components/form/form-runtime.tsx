@@ -16,6 +16,7 @@ import {
   type RuntimeQuestion,
 } from "./runtime-logic";
 import { useSaveDraft, useStartSession, useSubmitForm } from "~/hooks/api/public";
+import { readDeviceId } from "~/lib/device";
 import { runWithRetries } from "~/lib/retry";
 import { useRunnerStore, type AnswerValue } from "~/stores/runner-store";
 
@@ -29,17 +30,6 @@ import { useRunnerStore, type AnswerValue } from "~/stores/runner-store";
  */
 
 export type BootState = "starting" | "ready" | "already-submitted" | "error";
-
-/** A stable per-browser id. Not an identity — only a key for resuming a draft. */
-export function readDeviceId(): string {
-  const KEY = "streamyst:device";
-  const existing = localStorage.getItem(KEY);
-  if (existing) return existing;
-
-  const created = crypto.randomUUID();
-  localStorage.setItem(KEY, created);
-  return created;
-}
 
 export const unlockTokenKey = (slug: string) => `streamyst:unlock:${slug}`;
 
