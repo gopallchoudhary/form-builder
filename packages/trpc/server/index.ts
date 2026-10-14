@@ -20,6 +20,13 @@ export const serverRouter = router({
 export { createContextFactory, type CookieConfig, type Context } from "./context";
 export { appErrorToHttpStatus } from "./utils/errors";
 export {
+  attachRealtimeServer,
+  detachRealtimeServer,
+  emitPollResults,
+  pollRoom,
+  type PollResultsPayload,
+} from "./realtime";
+export {
   RATE_LIMITS,
   resetRateLimits,
   setRateLimitStore,
