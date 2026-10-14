@@ -1,6 +1,6 @@
 import http from "node:http";
 import { logger } from "@repo/logger";
-import { attachRealtimeServer } from "@repo/trpc/server";
+import { attachRealtimeServer, registerRealtimeHandlers } from "@repo/trpc/server";
 import { Server as SocketIOServer } from "socket.io";
 import { app as expressApplication } from "./server";
 
@@ -33,6 +33,7 @@ const io = new SocketIOServer(server, {
 });
 
 attachRealtimeServer(io);
+registerRealtimeHandlers(io);
 
 io.on("connection", (socket) => {
   logger.debug("Socket connected", { socketId: socket.id });

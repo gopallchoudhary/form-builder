@@ -28,6 +28,7 @@ export {
   pollRoom,
   type PollResultsPayload,
 } from "./realtime";
+export { registerRealtimeHandlers } from "./realtime-handlers";
 export {
   RATE_LIMITS,
   resetRateLimits,
