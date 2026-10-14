@@ -2,6 +2,7 @@ import { analyticsRouter } from "./routes/analytics/route";
 import { authRouter } from "./routes/auth/route";
 import { formRouter } from "./routes/form/route";
 import { formPageRouter } from "./routes/form-page/route";
+import { pollRouter } from "./routes/poll/route";
 import { publicRouter } from "./routes/public/route";
 import { questionRouter } from "./routes/question/route";
 import { responseRouter } from "./routes/response/route";
@@ -11,8 +12,9 @@ export const serverRouter = router({
   auth: authRouter,
   form: formRouter,
   formPage: formPageRouter,
-  question: questionRouter,
+  poll: pollRouter,
   public: publicRouter,
+  question: questionRouter,
   response: responseRouter,
   analytics: analyticsRouter,
 });

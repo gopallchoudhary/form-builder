@@ -323,9 +323,11 @@ class PollService {
 
     // Bucketed in UTC so the series is identical in every environment — PGlite in tests and
     // Postgres in production would otherwise disagree wherever the server timezone differs.
+    // `::date` arrives as a string from node-pg but as a Date from some drivers —
+    // PGlite in tests and Postgres in production must agree, so both are accepted.
     const series = await this.db
       .select({
-        day: sql<string>`date_trunc('day', ${pollVotesTable.createdAt} at time zone 'UTC')::date`,
+        day: sql<string | Date>`date_trunc('day', ${pollVotesTable.createdAt} at time zone 'UTC')::date`,
         count: count(pollVotesTable.id),
       })
       .from(pollVotesTable)
@@ -333,7 +335,12 @@ class PollService {
       .groupBy(sql`1`)
       .orderBy(sql`1`);
 
-    const byDay = new Map(series.map((row) => [String(row.day), row.count]));
+    const byDay = new Map(
+      series.map((row) => [
+        row.day instanceof Date ? row.day.toISOString().slice(0, 10) : String(row.day),
+        row.count,
+      ]),
+    );
     const filled: Array<{ day: string; count: number }> = [];
     for (let offset = days - 1; offset >= 0; offset -= 1) {
       const date = new Date(Date.now() - offset * 24 * 60 * 60 * 1000);

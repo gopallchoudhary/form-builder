@@ -2,6 +2,7 @@ import AccessService from "@repo/services/access";
 import AnalyticsService from "@repo/services/analytics";
 import FormPageService from "@repo/services/form-page";
 import FormService from "@repo/services/form";
+import PollService from "@repo/services/poll";
 import QuestionService from "@repo/services/question";
 import ResponseService from "@repo/services/response";
 import UserService from "@repo/services/user";
@@ -48,6 +49,7 @@ function typedService<T extends object>(service: T): T {
 export const userService = typedService(new UserService());
 export const formService = typedService(new FormService());
 export const formPageService = typedService(new FormPageService());
+export const pollService = typedService(new PollService());
 export const questionService = typedService(new QuestionService());
 export const responseService = typedService(new ResponseService());
 export const analyticsService = typedService(new AnalyticsService());
