@@ -33,13 +33,16 @@ function randomSuffix(length = SUFFIX_LENGTH): string {
 /**
  * Derives a candidate slug from a form title. Always returns something usable —
  * a title made entirely of punctuation or emoji falls back to a random slug.
+ *
+ * `fallbackPrefix` names the thing the slug is for, so an untitled poll does not get a
+ * `form-` slug. Defaults to `form` so existing callers are untouched.
  */
-export function generateSlug(title: string): string {
+export function generateSlug(title: string, fallbackPrefix = "form"): string {
   const base = slugify(title);
   const suffix = randomSuffix();
   const maxBaseLength = MAX_SLUG_LENGTH - suffix.length - 1;
 
-  if (!base) return `form-${suffix}`;
+  if (!base) return `${fallbackPrefix}-${suffix}`;
 
   const trimmed = base.slice(0, maxBaseLength).replace(/-$/, "");
   return `${trimmed}-${suffix}`;

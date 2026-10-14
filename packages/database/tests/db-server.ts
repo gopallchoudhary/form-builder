@@ -125,6 +125,8 @@ export async function setupTestDatabase(scope = "default"): Promise<ServerTestDa
     "questions",
     "form_pages",
     "forms",
+    "poll_votes",
+    "polls",
     "users",
   ];
 

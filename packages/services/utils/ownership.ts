@@ -2,6 +2,7 @@ import { db as defaultDb, eq } from "@repo/database";
 import type { Database } from "@repo/database";
 import { formsTable } from "@repo/database/models/form";
 import { formPagesTable } from "@repo/database/models/form-page";
+import { pollsTable } from "@repo/database/models/poll";
 import { questionsTable } from "@repo/database/models/question";
 
 import { ForbiddenError, NotFoundError } from "./errors";
@@ -86,4 +87,29 @@ export async function assertPageOwnership(
   }
 
   return page;
+}
+
+/** Throws unless `userId` created `pollId`. Returns the row so callers can reuse it. */
+export async function assertPollOwnership(
+  pollId: string,
+  userId: string,
+  db: Database = defaultDb,
+) {
+  const rows = await db
+    .select({
+      id: pollsTable.id,
+      createdBy: pollsTable.createdBy,
+      status: pollsTable.status,
+    })
+    .from(pollsTable)
+    .where(eq(pollsTable.id, pollId))
+    .limit(1);
+
+  const poll = rows[0];
+  if (!poll) throw new NotFoundError("Poll does not exist");
+  if (poll.createdBy !== userId) {
+    throw new ForbiddenError("You do not have access to this poll");
+  }
+
+  return poll;
 }

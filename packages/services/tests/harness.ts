@@ -9,6 +9,7 @@ import {
 
 import FormPageService from "../form-page";
 import FormService from "../form";
+import PollService from "../poll";
 import QuestionService from "../question";
 import UserService from "../user";
 
@@ -24,6 +25,7 @@ export interface ServiceHarness {
   users: UserService;
   forms: FormService;
   pages: FormPageService;
+  polls: PollService;
   questions: QuestionService;
   reset: () => Promise<void>;
   close: () => Promise<void>;
@@ -50,6 +52,7 @@ export async function createServiceHarness(scope: string): Promise<ServiceHarnes
     users: new UserService(db),
     forms: new FormService(db),
     pages: new FormPageService(db),
+    polls: new PollService(db),
     questions: new QuestionService(db),
 
     reset: () => server.reset(),
