@@ -6,11 +6,13 @@ export {
   getPollInsightsInput as getPollInsightsInputModel,
   getPollResultsInput as getPollResultsInputModel,
   getPublicPollInput as getPublicPollInputModel,
-  listPollsByUserIdInput as listPollsByUserIdInputModel,
   pollIdInput as pollIdInputModel,
   setPollStatusInput as setPollStatusInputModel,
   updatePollInput as updatePollInputModel,
 } from "@repo/services/poll/model";
+
+/** The list takes no input: the caller is the session, never a parameter. */
+export const pollListInputModel = z.undefined();
 
 const POLL_STATUS = z.enum(["DRAFT", "OPEN", "CLOSED"]);
 

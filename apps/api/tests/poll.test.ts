@@ -152,7 +152,7 @@ describe.skipIf(!available)("the poll HTTP API", () => {
       });
 
       const listed = await request(app as never)
-        .get(`/api/poll/listPolls?userId=${user.id}`)
+        .get(`/api/poll/listPolls`)
         .set(auth(user.cookie));
 
       expect(listed.status).toBe(200);

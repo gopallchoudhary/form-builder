@@ -9,10 +9,10 @@ import {
   getPollInsightsInputModel,
   getPollResultsInputModel,
   getPublicPollInputModel,
-  listPollsByUserIdInputModel,
   pollDetailOutputSchema,
   pollIdInputModel,
   pollInsightsOutputSchema,
+  pollListInputModel,
   pollResultsOutputSchema,
   pollSummaryOutputSchema,
   publicPollOutputSchema,
@@ -50,9 +50,14 @@ export const pollRouter = router({
         summary: "Your polls with vote totals",
       },
     })
-    .input(listPollsByUserIdInputModel)
+    /*
+     * No input: the user comes from the session, not the request. Taking a `userId`
+     * parameter here would let any signed-in caller list anyone else's polls by naming
+     * them, which per-poll ownership checks elsewhere cannot prevent.
+     */
+    .input(pollListInputModel)
     .output(pollSummaryOutputSchema.array())
-    .query(({ input }) => pollService.listPollsByUserId(input)),
+    .query(({ ctx }) => pollService.listPollsByUserId({ userId: ctx.user.id })),
 
   createPoll: authenticatedProcedure
     .meta({

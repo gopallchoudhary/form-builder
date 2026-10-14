@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconChartBar,
+  IconChartPie,
   IconForms,
   IconInbox,
   IconLayoutDashboard,
@@ -39,6 +40,9 @@ import { useConsoleStore } from "~/stores/console-store";
  * Four sections, in the order they are actually worked in. Responses and Analytics take a
  * form in `?form=`, so these two links land on a real page whether or not a form was chosen
  * — which is also why they can sit beside Dashboard rather than inside a form's tabs.
+ *
+ * Polls sits last because it is a separate workflow, not a step in the form one: nothing
+ * here reads a form, shares its store, or navigates into it.
  */
 
 interface NavItem {
@@ -52,6 +56,7 @@ const NAV_MAIN: NavItem[] = [
   { title: "Forms", url: "/forms", icon: IconForms },
   { title: "Responses", url: "/responses", icon: IconInbox },
   { title: "Analytics", url: "/analytics", icon: IconChartBar },
+  { title: "Polls", url: "/polls", icon: IconChartPie },
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
