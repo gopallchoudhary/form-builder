@@ -43,6 +43,13 @@
       "when": 1790576132770,
       "tag": "0005_conscious_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791987596210,
+      "tag": "0006_stale_network",
+      "breakpoints": true
     }
   ]
 }

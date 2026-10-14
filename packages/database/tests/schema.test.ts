@@ -332,4 +332,131 @@ describe("schema", () => {
       expect(rows[0]!.n).toBe(0);
     });
   });
+
+  describe("polls", () => {
+    /*
+     * The forms block above ends by deleting this same user to prove its cascade, so this
+     * re-seeds idempotently rather than assuming anything about what ran before. Without it
+     * every insert below fails the `created_by` foreign key.
+     */
+    beforeAll(async () => {
+      await query(
+        `INSERT INTO users (id, full_name, email, password_hash)
+         VALUES ($1, 'Gopal', 'gopal@example.com', 'x')
+         ON CONFLICT (id) DO NOTHING`,
+        [userId],
+      );
+    });
+
+    async function createPoll(slugSuffix = ""): Promise<string> {
+      slugCounter += 1;
+      const rows = await query<{ id: string }>(
+        `INSERT INTO polls (created_by, slug, title, options)
+         VALUES ($1, $2, 'Best lunch', '[{"id":"ramen","label":"Ramen"},{"id":"thali","label":"Thali"}]')
+         RETURNING id`,
+        [userId, `poll-${slugCounter}${slugSuffix}`],
+      );
+      return rows[0]!.id;
+    }
+
+    const DEVICE_A = "22222222-2222-4222-8222-222222222222";
+    const DEVICE_B = "33333333-3333-4333-8333-333333333333";
+
+    async function vote(pollId: string, deviceId: string, optionId: string): Promise<void> {
+      await query(`INSERT INTO poll_votes (poll_id, device_id, option_id) VALUES ($1, $2, $3)`, [
+        pollId,
+        deviceId,
+        optionId,
+      ]);
+    }
+
+    it("starts drafts, invisible on the public URL by status rather than by absence", async () => {
+      const pollId = await createPoll();
+
+      const rows = await query<{ status: string }>(`SELECT status FROM polls WHERE id = $1`, [
+        pollId,
+      ]);
+
+      expect(rows[0]!.status).toBe("DRAFT");
+    });
+
+    it("rejects a status outside the lifecycle", async () => {
+      await expect(
+        query(`INSERT INTO polls (created_by, slug, title, options, status)
+               VALUES ($1, 'bad-status-poll', 'X', '[]', 'LIVE')`, [userId]),
+      ).rejects.toThrow();
+    });
+
+    it("rejects a duplicate slug, because the voter URL is /p/[slug]", async () => {
+      await query(
+        `INSERT INTO polls (created_by, slug, title, options)
+         VALUES ($1, 'shared-poll', 'First', '[]')`,
+        [userId],
+      );
+
+      await expect(
+        query(
+          `INSERT INTO polls (created_by, slug, title, options)
+           VALUES ($1, 'shared-poll', 'Second', '[]')`,
+          [userId],
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("enforces one vote per device, which is the entire ballot rule", async () => {
+      const pollId = await createPoll();
+
+      await vote(pollId, DEVICE_A, "ramen");
+
+      // A second vote from the same device must fail at the database, not just in the
+      // service: two concurrent requests racing past an application check would otherwise
+      // both land, and the tally would count one device twice.
+      await expect(vote(pollId, DEVICE_A, "thali")).rejects.toThrow();
+    });
+
+    it("lets different devices vote on the same poll", async () => {
+      const pollId = await createPoll();
+
+      await vote(pollId, DEVICE_A, "ramen");
+      await vote(pollId, DEVICE_B, "thali");
+
+      const rows = await query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM poll_votes WHERE poll_id = $1`,
+        [pollId],
+      );
+      expect(rows[0]!.n).toBe(2);
+    });
+
+    it("lets one device vote on different polls", async () => {
+      const first = await createPoll();
+      const second = await createPoll();
+
+      await vote(first, DEVICE_A, "ramen");
+      await expect(vote(second, DEVICE_A, "ramen")).resolves.toBeUndefined();
+    });
+
+    it("deletes a poll's votes with it", async () => {
+      const pollId = await createPoll();
+
+      await vote(pollId, DEVICE_A, "ramen");
+      await testDb.exec(`DELETE FROM polls WHERE id = '${pollId}'`);
+
+      const rows = await query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM poll_votes WHERE poll_id = $1`,
+        [pollId],
+      );
+      expect(rows[0]!.n).toBe(0);
+    });
+
+    it("deletes a user's polls with them", async () => {
+      const pollId = await createPoll();
+
+      await testDb.exec(`DELETE FROM users WHERE id = '${userId}'`);
+
+      const rows = await query<{ n: number }>(`SELECT count(*)::int AS n FROM polls WHERE id = $1`, [
+        pollId,
+      ]);
+      expect(rows[0]!.n).toBe(0);
+    });
+  });
 });
