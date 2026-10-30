@@ -1,4 +1,9 @@
-import { ArrowUpRightIcon, ChartNoAxesColumnIncreasingIcon, CircleHelpIcon, LayoutDashboardIcon } from "lucide-react";
+import {
+  ArrowUpRightIcon,
+  ChartNoAxesColumnIncreasingIcon,
+  CircleHelpIcon,
+  LayoutDashboardIcon,
+} from "lucide-react";
 
 import { cn } from "~/lib/utils";
 
@@ -66,7 +71,9 @@ export function DashboardPreview() {
                 <p className="text-[9px] font-bold tracking-[0.14em] text-muted-foreground uppercase sm:text-[10px]">
                   Your workspace
                 </p>
-                <p className="mt-1 text-sm font-bold tracking-tight sm:text-base">Good morning, Maya</p>
+                <p className="mt-1 text-sm font-bold tracking-tight sm:text-base">
+                  Good morning, Maya
+                </p>
               </div>
               <div className="hidden rounded-lg border border-border px-2.5 py-1.5 text-[9px] font-semibold text-muted-foreground sm:block">
                 Last 30 days
@@ -105,7 +112,7 @@ export function DashboardPreview() {
                       )}
                       style={{
                         height: `${height}%`,
-                        animationDelay: `${240 + index * 20}ms`,
+                        animationDelay: `${85 + index * 13}ms`,
                       }}
                     />
                   ))}
@@ -156,7 +163,9 @@ export function DashboardPreview() {
           <PreviewPollOption label="Ramen House" count="67%" width="67%" active />
           <PreviewPollOption label="Garden Café" count="33%" width="33%" />
         </div>
-        <p className="text-muted-foreground mt-3 text-[9px]">42 sample votes · results update live</p>
+        <p className="text-muted-foreground mt-3 text-[9px]">
+          42 sample votes · results update live
+        </p>
       </div>
     </div>
   );
@@ -165,7 +174,9 @@ export function DashboardPreview() {
 function PreviewMetric({ label, value, change }: { label: string; value: string; change: string }) {
   return (
     <div className="min-w-0 rounded-xl bg-card p-2.5 ring-1 ring-border/70 sm:p-3">
-      <p className="text-muted-foreground truncate text-[8px] font-semibold sm:text-[10px]">{label}</p>
+      <p className="text-muted-foreground truncate text-[8px] font-semibold sm:text-[10px]">
+        {label}
+      </p>
       <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-1 gap-y-0.5">
         <span className="text-sm font-black tracking-tight sm:text-lg">{value}</span>
         <span className="text-[8px] font-bold text-positive sm:text-[9px]">{change}</span>

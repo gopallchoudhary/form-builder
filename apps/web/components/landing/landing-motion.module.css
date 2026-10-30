@@ -2,27 +2,15 @@
  * Landing-page motion, kept in one place so the timing reads as a single sequence rather
  * than a pile of one-off utility classes.
  *
- * Every animation is entrance-only: the page does not reveal sections on scroll, parallax,
- * or loop anything. The live-poll dot already pulses through Tailwind, and that utility is
- * marked `motion-safe` at its call site. This module turns the rest off wholesale when the
- * visitor asks for reduced motion.
+ * Motion has two deliberate beats: the hero arrives once, then lower content reveals once
+ * as it enters view. There is no parallax or scroll-linked motion. The live-poll dot is the
+ * only repeating cue, and it is marked `motion-safe` at its call site.
  */
 
 @keyframes landing-rise {
   from {
     opacity: 0;
     transform: translate3d(0, 0.5rem, 0);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0);
-  }
-}
-
-@keyframes landing-preview {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 0.625rem, 0);
   }
   to {
     opacity: 1;
@@ -42,24 +30,58 @@
 }
 
 .rise {
-  animation: landing-rise 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: landing-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .preview {
-  animation: landing-preview 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: landing-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .bar {
   transform-origin: bottom;
-  animation: landing-bar 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: landing-bar 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scrollReveal {
+  --landing-reveal-delay: 0ms;
+}
+
+.scrollReveal[data-reveal="pending"] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 0.5rem, 0);
+}
+
+/* Keep keyboard users from ever tabbing to a fully transparent control. */
+.scrollReveal[data-reveal="pending"]:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+.scrollReveal[data-reveal="visible"] {
+  animation: landing-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) var(--landing-reveal-delay) both;
+}
+
+.scrollReveal[data-reveal="visible"]:focus-within {
+  animation: none;
+  opacity: 1;
+  transform: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rise,
   .preview,
-  .bar {
+  .bar,
+  .scrollReveal[data-reveal="visible"] {
     animation: none;
     opacity: 1;
+    transform: none;
+  }
+
+  .scrollReveal[data-reveal="pending"] {
+    opacity: 1;
+    pointer-events: auto;
     transform: none;
   }
 }

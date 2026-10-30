@@ -64,7 +64,7 @@ export function LandingNavbar() {
             aria-expanded={menuOpen}
             aria-controls="landing-mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex size-10 items-center justify-center rounded-full text-foreground transition-[color,background-color,scale] duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-95 md:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full text-foreground transition-[color,background-color,scale] duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-95 motion-reduce:transition-none md:hidden"
           >
             {menuOpen ? <XIcon className="size-5" /> : <MenuIcon className="size-5" />}
           </button>
