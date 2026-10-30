@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { cn } from "~/lib/utils";
+
 /**
  * The wordmark, used on the two pages that have no navigation of their own.
  *
@@ -9,12 +11,12 @@ import Link from "next/link";
 export function ProductMark({ className }: { className?: string }) {
   return (
     <Link
-      href="/dashboard"
-      className={[
+      href="/"
+      className={cn(
         "flex items-center gap-2 self-center font-medium",
         "focus-visible:ring-ring rounded-xl focus-visible:ring-2 focus-visible:outline-none",
-        className ?? "",
-      ].join(" ")}
+        className,
+      )}
     >
       <span className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-pill text-xs font-bold">
         F

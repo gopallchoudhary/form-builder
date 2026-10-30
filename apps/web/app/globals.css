@@ -19,6 +19,9 @@
   --radius-4xl: 2.5rem; /* 40 */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Fixed brand surfaces used by the marketing footer in either selected theme. */
+  --color-brand-ink: #0e0f0c;
+  --color-brand-canvas-soft: #e8ebe6;
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);

@@ -1,16 +1,32 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { LandingPage } from "~/components/landing/landing-page";
 import { getCurrentUser } from "~/lib/auth";
 
+export const metadata: Metadata = {
+  title: "Formora — Forms and live polls",
+  description:
+    "Build shareable forms, run live polls, and see what people think in one clear workspace.",
+  openGraph: {
+    title: "Formora — Forms and live polls",
+    description:
+      "Build shareable forms, run live polls, and see what people think in one clear workspace.",
+    type: "website",
+  },
+};
+
 /**
- * A server component, so the redirect happens before anything is sent to the browser.
+ * The public marketing page for signed-out visitors; the creator's workspace remains the
+ * home for signed-in users.
  *
- * This page used to be a client component doing `router.replace("/dashboard")` from an
- * effect keyed on the user query. During the query's first render `user` is undefined,
- * so the effect chose `/login` before the answer arrived — and once it had replaced to
- * `/login`, the dashboard's own copy of the same effect replaced back. Hence the loop.
+ * The user check stays server-side, so an existing session goes straight to the dashboard
+ * before the landing page paints, while a new visitor gets the marketing page rather than
+ * being sent to login with no context.
  */
 export default async function Home() {
   const user = await getCurrentUser();
-  redirect(user ? "/dashboard" : "/login");
+  if (user) redirect("/dashboard");
+
+  return <LandingPage />;
 }
