@@ -1,5 +1,9 @@
 import { ArrowUpRightIcon, ChartNoAxesColumnIncreasingIcon, CircleHelpIcon, LayoutDashboardIcon } from "lucide-react";
 
+import { cn } from "~/lib/utils";
+
+import styles from "./landing-motion.module.css";
+
 const ACTIVITY = [34, 49, 42, 63, 52, 76, 68, 88, 73, 96, 82, 100];
 
 /**
@@ -94,12 +98,15 @@ export function DashboardPreview() {
                   {ACTIVITY.map((height, index) => (
                     <span
                       key={index}
-                      className={
-                        index === ACTIVITY.length - 1
-                          ? "bg-primary min-w-0 flex-1 rounded-t-sm"
-                          : "bg-chart-2/60 min-w-0 flex-1 rounded-t-sm"
-                      }
-                      style={{ height: `${height}%` }}
+                      className={cn(
+                        styles.bar,
+                        "min-w-0 flex-1 rounded-t-sm",
+                        index === ACTIVITY.length - 1 ? "bg-primary" : "bg-chart-2/60",
+                      )}
+                      style={{
+                        height: `${height}%`,
+                        animationDelay: `${240 + index * 20}ms`,
+                      }}
                     />
                   ))}
                 </div>
@@ -140,7 +147,7 @@ export function DashboardPreview() {
             Sample live poll
           </span>
           <span className="bg-positive-subtle text-positive-foreground inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold">
-            <span className="bg-positive size-1.5 animate-pulse rounded-full" />
+            <span className="bg-positive size-1.5 rounded-full motion-safe:animate-pulse" />
             LIVE
           </span>
         </div>

@@ -40,10 +40,19 @@ export function LandingNavbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="hidden sm:inline-flex motion-safe:active:scale-[0.98]"
+          >
             <Link href="/login">Log in</Link>
           </Button>
-          <Button asChild size="sm" className="h-10 rounded-xl px-4 sm:h-12 sm:px-5">
+          <Button
+            asChild
+            size="sm"
+            className="h-10 rounded-xl px-4 motion-safe:active:scale-[0.98] sm:h-12 sm:px-5"
+          >
             <Link href="/signup">
               Create account
               <ArrowRightIcon className="size-4" />
@@ -55,7 +64,7 @@ export function LandingNavbar() {
             aria-expanded={menuOpen}
             aria-controls="landing-mobile-menu"
             onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-full text-foreground transition-[color,background-color,scale] duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-safe:active:scale-95 md:hidden"
           >
             {menuOpen ? <XIcon className="size-5" /> : <MenuIcon className="size-5" />}
           </button>
@@ -67,7 +76,8 @@ export function LandingNavbar() {
         hidden={!menuOpen}
         className={cn(
           "border-t border-border/60 bg-card px-4 py-4 md:hidden",
-          menuOpen && "animate-in fade-in slide-in-from-top-1 duration-150",
+          menuOpen &&
+            "motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-safe:duration-150",
         )}
       >
         <nav aria-label="Mobile navigation" className="mx-auto flex max-w-7xl flex-col gap-1">

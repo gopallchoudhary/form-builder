@@ -12,6 +12,7 @@ import { ProductMark } from "~/components/product-mark";
 
 import { DashboardPreview } from "./dashboard-preview";
 import { LandingNavbar } from "./landing-navbar";
+import styles from "./landing-motion.module.css";
 
 const STEPS = [
   {
@@ -82,39 +83,63 @@ export function LandingPage() {
       <section className="overflow-hidden bg-muted">
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-16 lg:grid-cols-[0.92fr_1.08fr] lg:gap-10 lg:px-8 lg:py-20 xl:py-24">
           <div className="relative z-10 max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground">
+            <div className={`${styles.rise} mb-6 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground`}>
               <span aria-hidden className="bg-primary size-2 rounded-full" />
               Forms and live polls, together
             </div>
 
-            <h1 className="max-w-[760px] text-[clamp(3.25rem,6.2vw,5.5rem)] leading-[0.91] font-black tracking-[-0.065em]">
+            <h1
+              className={`${styles.rise} max-w-[760px] text-[clamp(3.25rem,6.2vw,5.5rem)] leading-[0.91] font-black tracking-[-0.065em]`}
+              style={{ animationDelay: "50ms" }}
+            >
               <span className="block">Build forms.</span>
               <span className="block">Run live polls.</span>
             </h1>
 
-            <p className="text-muted-foreground mt-6 max-w-xl text-lg leading-7 sm:text-xl sm:leading-8">
+            <p
+              className={`${styles.rise} text-muted-foreground mt-6 max-w-xl text-lg leading-7 sm:text-xl sm:leading-8`}
+              style={{ animationDelay: "100ms" }}
+            >
               Collect thoughtful answers, share a quick vote, and see both take shape in one
               clear workspace.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Button asChild size="lg" className="h-12 rounded-xl px-6 text-base">
+            <div
+              className={`${styles.rise} mt-8 flex flex-col gap-3 sm:flex-row sm:items-center`}
+              style={{ animationDelay: "150ms" }}
+            >
+              <Button
+                asChild
+                size="lg"
+                className="h-12 rounded-xl px-6 text-base motion-safe:active:scale-[0.98]"
+              >
                 <Link href="/signup">
                   Create your account
                   <ArrowRightIcon className="size-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 rounded-xl px-6 text-base">
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="h-12 rounded-xl px-6 text-base motion-safe:active:scale-[0.98]"
+              >
                 <a href="#how-it-works">See how it works</a>
               </Button>
             </div>
 
-            <p className="text-muted-foreground mt-5 text-xs sm:text-sm">
+            <p
+              className={`${styles.rise} text-muted-foreground mt-5 text-xs sm:text-sm`}
+              style={{ animationDelay: "200ms" }}
+            >
               Start with a form or a poll. Your audience can respond from a link.
             </p>
           </div>
 
-          <div className="relative min-w-0 lg:-mr-8 xl:-mr-14">
+          <div
+            className={`${styles.preview} relative min-w-0 lg:-mr-8 xl:-mr-14`}
+            style={{ animationDelay: "120ms" }}
+          >
             <DashboardPreview />
           </div>
         </div>
@@ -140,7 +165,7 @@ export function LandingPage() {
               return (
                 <article
                   key={step.number}
-                  className={`${step.className} flex min-h-[250px] flex-col rounded-3xl p-6 sm:p-7`}
+                  className={`${step.className} flex min-h-[250px] flex-col rounded-3xl p-6 transition-[translate,box-shadow] duration-300 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg motion-safe:hover:shadow-foreground/5 sm:p-7`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-semibold tracking-[0.12em] text-muted-foreground">
@@ -178,11 +203,11 @@ export function LandingPage() {
             {PLAN_CARDS.map((plan) => (
               <article
                 key={plan.name}
-                className={
+                className={`flex flex-col rounded-3xl p-6 transition-[translate,box-shadow] duration-300 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg motion-safe:hover:shadow-foreground/5 sm:p-7 ${
                   plan.featured
-                    ? "flex flex-col rounded-3xl bg-foreground p-6 text-background sm:p-7"
-                    : "flex flex-col rounded-3xl bg-card p-6 text-card-foreground sm:p-7"
-                }
+                    ? "bg-foreground text-background"
+                    : "bg-card text-card-foreground"
+                }`}
               >
                 <p
                   className={
@@ -230,7 +255,7 @@ export function LandingPage() {
                 <Button
                   asChild
                   variant={plan.featured ? "default" : "outline"}
-                  className="mt-8 h-12 w-full rounded-xl text-base"
+                  className="mt-8 h-12 w-full rounded-xl text-base motion-safe:active:scale-[0.98]"
                 >
                   <Link href="/signup">Create your account</Link>
                 </Button>
@@ -254,7 +279,11 @@ export function LandingPage() {
               Make room for better answers.
             </h2>
           </div>
-          <Button asChild size="lg" className="h-12 shrink-0 rounded-xl px-6 text-base">
+          <Button
+            asChild
+            size="lg"
+            className="h-12 shrink-0 rounded-xl px-6 text-base motion-safe:active:scale-[0.98]"
+          >
             <Link href="/signup">
               Get started
               <ArrowRightIcon className="size-4" />
