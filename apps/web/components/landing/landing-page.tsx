@@ -19,7 +19,7 @@ const STEPS = [
     icon: FileTextIcon,
     title: "Build your question",
     body: "Create a thoughtful form for detailed answers, or a quick poll when you need a clear choice.",
-    className: "bg-card",
+    className: "bg-card dark:ring-1 dark:ring-border/70",
   },
   {
     number: "02",
@@ -33,7 +33,7 @@ const STEPS = [
     icon: MessagesSquareIcon,
     title: "See what people say",
     body: "Follow form responses, watch poll totals move, and understand the feedback in one workspace.",
-    className: "bg-card",
+    className: "bg-card dark:ring-1 dark:ring-border/70",
   },
 ] as const;
 
@@ -120,7 +120,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="scroll-mt-20 bg-card py-16 sm:py-20 lg:py-24">
+      <section id="how-it-works" className="scroll-mt-20 bg-muted py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-muted-foreground text-xs font-bold tracking-[0.16em] uppercase">
