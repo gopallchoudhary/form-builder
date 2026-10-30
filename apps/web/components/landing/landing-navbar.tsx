@@ -1,17 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRightIcon, MenuIcon, XIcon } from "lucide-react";
+import { useTheme } from "next-themes";
+import { ArrowRightIcon, MenuIcon, MoonIcon, SunIcon, XIcon } from "lucide-react";
 
 import { ProductMark } from "~/components/product-mark";
 import { Button } from "~/components/ui/button";
+import { nextThemeFor } from "~/lib/theme";
 import { cn } from "~/lib/utils";
 
 const LINKS = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#pricing", label: "Pricing" },
 ] as const;
+
+function LandingThemeToggle() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // Reserve the button's space until the client knows which theme action to show.
+  if (!mounted) return <span aria-hidden className="size-9 shrink-0 sm:size-10" />;
+
+  const target = nextThemeFor(resolvedTheme);
+  const label = target === "dark" ? "Dark mode" : "Light mode";
+  const Icon = target === "dark" ? MoonIcon : SunIcon;
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-label={`Switch to ${label.toLowerCase()}`}
+      title={label}
+      onClick={() => setTheme(target)}
+      className="size-9 shrink-0 rounded-full text-foreground motion-safe:active:scale-95 motion-reduce:transition-none sm:size-10"
+    >
+      <Icon aria-hidden className="size-5" />
+    </Button>
+  );
+}
 
 /**
  * Public-site navigation. The mobile menu is a real button with an explicit expanded state,
@@ -39,7 +69,8 @@ export function LandingNavbar() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
+          <LandingThemeToggle />
           <Button
             asChild
             variant="ghost"
@@ -51,10 +82,11 @@ export function LandingNavbar() {
           <Button
             asChild
             size="sm"
-            className="h-10 rounded-xl px-4 motion-safe:active:scale-[0.98] sm:h-12 sm:px-5"
+            className="h-10 rounded-xl px-3 motion-safe:active:scale-[0.98] sm:h-12 sm:px-5"
           >
             <Link href="/signup">
-              Create account
+              <span className="sm:hidden">Sign up</span>
+              <span className="hidden sm:inline">Create account</span>
               <ArrowRightIcon className="size-4" />
             </Link>
           </Button>
