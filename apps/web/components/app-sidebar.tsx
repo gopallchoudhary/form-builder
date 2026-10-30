@@ -90,9 +90,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:p-1.5!">
               <Link href="/dashboard">
                 <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-pill text-[10px] font-bold">
-                  S
+                  F
                 </span>
-                <span className="text-base font-semibold">Streamyst</span>
+                <span className="text-base font-semibold">Formora</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

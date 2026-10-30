@@ -92,7 +92,7 @@ const createContext = createContextFactory({
 });
 
 const openApiDocument = generateOpenApiDocument(serverRouter, {
-  title: "Streamyst OpenAPI",
+  title: "Formora OpenAPI",
   version: "1.0.0",
   baseUrl: `${env.API_BASE_URL.replace(/\/+$/, "")}/api`,
   // Sessions are httpOnly cookies, not bearer tokens. Describing them as such keeps
@@ -109,11 +109,11 @@ const openApiDocument = generateOpenApiDocument(serverRouter, {
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
 app.get("/", (_req, res) => {
-  return res.json({ message: "Streamyst is up and running..." });
+  return res.json({ message: "Formora is up and running..." });
 });
 
 app.get("/health", (_req, res) => {
-  return res.json({ message: "Streamyst server is healthy", healthy: true });
+  return res.json({ message: "Formora server is healthy", healthy: true });
 });
 
 app.get("/openapi.json", (_req, res) => {

@@ -82,7 +82,7 @@ export interface ConsoleState {
    * very next click, because nothing recorded the decision — only the accident of having
    * visited a builder at some point.
    *
-   * Only the back button clears it. Leaving by browser back, or via the Streamyst logo, leaves
+   * Only the back button clears it. Leaving by browser back, or via the Formora logo, leaves
    * it set, and so still resumes: the flag records the last *deliberate* exit, not every exit.
    */
   resumeBuilder: boolean;

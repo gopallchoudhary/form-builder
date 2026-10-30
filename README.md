@@ -1,4 +1,4 @@
-# Streamyst
+# Formora
 
 A form builder: creators compose forms, share a link or QR code, and collect
 responses from an audience.

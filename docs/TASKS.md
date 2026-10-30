@@ -1,4 +1,4 @@
-# Streamyst — Implementation Tasks
+# Formora — Implementation Tasks
 
 Phase-wise task list for turning the POC into a production form builder.
 

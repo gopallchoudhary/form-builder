@@ -17,9 +17,9 @@ export function ProductMark({ className }: { className?: string }) {
       ].join(" ")}
     >
       <span className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-pill text-xs font-bold">
-        S
+        F
       </span>
-      Streamyst
+      Formora
     </Link>
   )
 }

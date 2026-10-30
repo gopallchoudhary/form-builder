@@ -6,7 +6,7 @@ import { serverRouter } from "@repo/trpc/server";
 describe("openapi", () => {
   it("generates a document containing the new routers", () => {
     const doc = generateOpenApiDocument(serverRouter, {
-      title: "Streamyst API",
+      title: "Formora API",
       version: "1.0.0",
       baseUrl: "http://localhost:3000/api",
     });
