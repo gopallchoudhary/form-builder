@@ -11,7 +11,9 @@ import { Button } from "~/components/ui/button";
 import { ProductMark } from "~/components/product-mark";
 
 import { DashboardPreview } from "./dashboard-preview";
+import { LandingFaq } from "./landing-faq";
 import { LandingNavbar } from "./landing-navbar";
+import { ProductShowcase } from "./product-showcase";
 import { ScrollReveal } from "./scroll-reveal";
 import styles from "./landing-motion.module.css";
 
@@ -39,26 +41,39 @@ const STEPS = [
   },
 ] as const;
 
-const PLAN_CARDS = [
+const USE_CASES = [
   {
-    name: "Gather",
-    audience: "For thoughtful feedback",
-    description: "Give people room to explain what they think.",
-    features: ["Build shareable forms", "Collect written responses", "Review response trends"],
+    name: "Collect detailed feedback",
+    audience: "FORMS",
+    description:
+      "Invite people to explain what they think, then review their responses in your workspace.",
+    features: [
+      "Share a public form link",
+      "Collect written answers",
+      "Password-protect access when needed",
+    ],
     featured: false,
   },
   {
-    name: "Decide",
-    audience: "For quick group choices",
-    description: "Turn a question into a live vote and see the result take shape.",
-    features: ["Create live polls", "Share a public voting link", "Watch totals update live"],
+    name: "Make a group decision",
+    audience: "LIVE POLLS",
+    description: "Put a choice to the group and follow the result as votes arrive.",
+    features: [
+      "Vote from a shared link",
+      "See results after voting",
+      "Change a vote while the poll is open",
+    ],
     featured: true,
   },
   {
-    name: "Understand",
-    audience: "For the full feedback loop",
-    description: "Bring forms, polls, and their results into one clear workspace.",
-    features: ["Forms and polls together", "Response analytics", "Poll insights over time"],
+    name: "Follow the feedback",
+    audience: "ONE WORKSPACE",
+    description: "Keep detailed responses and quick poll results together in the same workspace.",
+    features: [
+      "Manage forms and polls together",
+      "Review form responses",
+      "Follow results as poll votes arrive",
+    ],
     featured: false,
   },
 ] as const;
@@ -66,11 +81,8 @@ const PLAN_CARDS = [
 /**
  * Public Formora landing page.
  *
- * The composition has one visual risk and everything else stays quiet: the screenshot-like
- * workspace preview carries a live poll card over the dashboard frame. It shows the
- * product's distinctive combination — structured forms and quick decisions — without
- * borrowing the generic gradient-and-floating-stat-card language that could belong to any
- * SaaS landing page.
+ * The page shows both sides of the feedback loop: a creator workspace above and sample public
+ * form/poll experiences below. The previews use illustrative content, never creator data.
  *
  * Surfaces use the site's existing semantic tokens, so visitors keep their selected theme.
  * In the light palette, the hero is sage over white content; in dark, it becomes ink over
@@ -117,7 +129,7 @@ export function LandingPage() {
                 className="h-12 rounded-xl px-6 text-base motion-safe:active:scale-[0.98]"
               >
                 <Link href="/signup">
-                  Create your account
+                  Create your first form or poll
                   <ArrowRightIcon className="size-4" />
                 </Link>
               </Button>
@@ -135,7 +147,7 @@ export function LandingPage() {
               className={`${styles.rise} text-muted-foreground mt-5 text-xs sm:text-sm`}
               style={{ animationDelay: "160ms" }}
             >
-              Start with a form or a poll. Your audience can respond from a link.
+              Your audience can respond from a public link—no Formora account needed.
             </p>
           </div>
 
@@ -147,6 +159,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <ProductShowcase />
 
       <section id="how-it-works" className="scroll-mt-20 bg-muted py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -188,71 +202,71 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="scroll-mt-20 bg-muted py-16 sm:py-20 lg:py-24">
+      <section
+        id="ways-to-use"
+        aria-labelledby="ways-to-use-heading"
+        className="scroll-mt-20 bg-muted py-16 sm:py-20 lg:py-24"
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <ScrollReveal className="mx-auto max-w-2xl text-center">
             <p className="text-muted-foreground text-xs font-bold tracking-[0.16em] uppercase">
-              Pricing preview · illustrative
+              Ways to use Formora
             </p>
-            <h2 className="mt-3 text-3xl leading-tight font-black tracking-[-0.045em] sm:text-4xl">
-              Start with what you need.
+            <h2
+              id="ways-to-use-heading"
+              className="mt-3 text-3xl leading-tight font-black tracking-[-0.045em] sm:text-4xl"
+            >
+              One workspace for the full feedback loop.
             </h2>
             <p className="text-muted-foreground mt-4 text-base leading-7 sm:text-lg">
-              These cards show ways to use Formora, not paid tiers or feature limits. Pricing is
-              still to be announced.
+              Start with a detailed question, a quick poll, or both. These are product workflows,
+              not paid tiers; pricing has not been announced.
             </p>
           </ScrollReveal>
 
           <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
-            {PLAN_CARDS.map((plan, index) => (
-              <ScrollReveal key={plan.name} delay={index * 70} className="h-full">
+            {USE_CASES.map((useCase, index) => (
+              <ScrollReveal key={useCase.name} delay={index * 70} className="h-full">
                 <article
                   className={`flex h-full flex-col rounded-3xl p-6 transition-[translate,box-shadow] duration-300 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:shadow-lg motion-safe:hover:shadow-foreground/5 motion-reduce:transition-none sm:p-7 ${
-                    plan.featured ? "bg-foreground text-background" : "bg-card text-card-foreground"
+                    useCase.featured
+                      ? "bg-foreground text-background"
+                      : "bg-card text-card-foreground"
                   }`}
                 >
                   <p
                     className={
-                      plan.featured
+                      useCase.featured
                         ? "text-primary text-xs font-bold tracking-[0.14em] uppercase"
                         : "text-muted-foreground text-xs font-bold tracking-[0.14em] uppercase"
                     }
                   >
-                    Illustrative plan
+                    {useCase.audience}
                   </p>
-                  <h3 className="mt-4 text-2xl font-black tracking-tight">{plan.name}</h3>
+                  <h3 className="mt-4 text-2xl font-black tracking-tight">{useCase.name}</h3>
                   <p
                     className={
-                      plan.featured
-                        ? "mt-1 text-sm font-semibold text-background/75"
-                        : "text-muted-foreground mt-1 text-sm font-semibold"
-                    }
-                  >
-                    {plan.audience}
-                  </p>
-                  <p
-                    className={
-                      plan.featured
+                      useCase.featured
                         ? "mt-5 min-h-12 text-sm leading-6 text-background/80"
                         : "text-muted-foreground mt-5 min-h-12 text-sm leading-6"
                     }
                   >
-                    {plan.description}
+                    {useCase.description}
                   </p>
 
                   <ul className="mt-5 flex flex-1 flex-col gap-3">
-                    {plan.features.map((feature) => (
+                    {useCase.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-2.5 text-sm">
                         <CheckIcon
                           aria-hidden
                           className={
-                            plan.featured
+                            useCase.featured
                               ? "text-primary mt-0.5 size-4 shrink-0"
                               : "text-positive mt-0.5 size-4 shrink-0"
                           }
                         />
                         <span
-                          className={plan.featured ? "text-background/90" : "text-foreground/85"}
+                          className={useCase.featured ? "text-background/90" : "text-foreground/85"}
                         >
                           {feature}
                         </span>
@@ -262,7 +276,7 @@ export function LandingPage() {
 
                   <Button
                     asChild
-                    variant={plan.featured ? "default" : "outline"}
+                    variant={useCase.featured ? "default" : "outline"}
                     className="mt-8 h-12 w-full rounded-xl text-base motion-safe:active:scale-[0.98]"
                   >
                     <Link href="/signup">Create your account</Link>
@@ -271,12 +285,10 @@ export function LandingPage() {
               </ScrollReveal>
             ))}
           </div>
-
-          <p className="text-muted-foreground mt-5 text-center text-xs">
-            No prices, billing terms, or feature limits are being represented here.
-          </p>
         </div>
       </section>
+
+      <LandingFaq />
 
       <section className="bg-secondary py-14 sm:py-16">
         <ScrollReveal className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -319,15 +331,27 @@ export function LandingPage() {
             >
               <a
                 className="text-brand-canvas-soft/80 transition-colors hover:text-white"
+                href="#forms-and-polls"
+              >
+                Forms & polls
+              </a>
+              <a
+                className="text-brand-canvas-soft/80 transition-colors hover:text-white"
                 href="#how-it-works"
               >
                 How it works
               </a>
               <a
                 className="text-brand-canvas-soft/80 transition-colors hover:text-white"
-                href="#pricing"
+                href="#ways-to-use"
               >
-                Pricing preview
+                Ways to use
+              </a>
+              <a
+                className="text-brand-canvas-soft/80 transition-colors hover:text-white"
+                href="#faq"
+              >
+                FAQ
               </a>
               <Link
                 className="text-brand-canvas-soft/80 transition-colors hover:text-white"

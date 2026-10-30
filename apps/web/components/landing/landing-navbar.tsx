@@ -11,8 +11,9 @@ import { nextThemeFor } from "~/lib/theme";
 import { cn } from "~/lib/utils";
 
 const LINKS = [
+  { href: "#forms-and-polls", label: "Forms & polls" },
   { href: "#how-it-works", label: "How it works" },
-  { href: "#pricing", label: "Pricing" },
+  { href: "#faq", label: "FAQ" },
 ] as const;
 
 function LandingThemeToggle() {

@@ -7,11 +7,11 @@ import { getCurrentUser } from "~/lib/auth";
 export const metadata: Metadata = {
   title: "Formora — Forms and live polls",
   description:
-    "Build shareable forms, run live polls, and see what people think in one clear workspace.",
+    "Build shareable forms for detailed feedback and live polls for group decisions. Respondents can answer from a public link without a Formora account.",
   openGraph: {
     title: "Formora — Forms and live polls",
     description:
-      "Build shareable forms, run live polls, and see what people think in one clear workspace.",
+      "Build shareable forms for detailed feedback and live polls for group decisions. Respondents can answer from a public link without a Formora account.",
     type: "website",
   },
 };
