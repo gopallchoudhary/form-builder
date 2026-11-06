@@ -43,15 +43,16 @@ private, run `docker login` on the host once with a read-only token.
    ```
 
 4. Make sure nothing else is listening on `:80` or `:443`.
-5. Create the deploy directory and the environment file:
+5. Create the deploy directory and the environment file. From your local checkout:
 
    ```sh
-   sudo mkdir -p /opt/formora
-   sudo chown ubuntu:ubuntu /opt/formora
-   cd /opt/formora
-   cp /path/to/deploy/.env.production.example .env
-   chmod 600 .env
+   ssh ubuntu@3.109.1.233 'mkdir -p /home/ubuntu/formora'
+   scp deploy/.env.production.example \
+     ubuntu@3.109.1.233:/home/ubuntu/formora/.env
+   ssh ubuntu@3.109.1.233 'chmod 600 /home/ubuntu/formora/.env'
    ```
+
+   Then edit `/home/ubuntu/formora/.env` on the host (or copy it back) and fill every blank.
 
    Generate `JWT_SECRET` and `POSTGRES_PASSWORD` with:
 
@@ -79,10 +80,10 @@ Push to `main` (or run **Deploy API** manually from the Actions tab). The workfl
 2. runs the backend tests against a temporary Postgres service;
 3. builds and pushes `gopalchoudhary/formora:<commit-sha>` and `:latest`;
 4. starts the pushed image once and checks `/health`;
-5. copies `deploy/docker-compose.yml` to `/opt/formora`, runs migrations, restarts the API,
+5. copies `deploy/docker-compose.yml` to `/home/ubuntu/formora`, runs migrations, restarts the API,
    and checks the public health endpoint.
 
-The compose file is safe to overwrite. `/opt/formora/.env` is not touched by CI.
+The compose file is safe to overwrite. `/home/ubuntu/formora/.env` is not touched by CI.
 
 ## Verification
 
@@ -99,7 +100,7 @@ attributes in the browser, and a live-poll Socket.IO update.
 Every image is tagged with its commit SHA. To move back:
 
 ```sh
-cd /opt/formora
+cd /home/ubuntu/formora
 IMAGE_TAG=<previous-sha> docker compose up -d --wait api
 ```
 
@@ -115,3 +116,25 @@ backup rather than only rolling back the image.
 - Back up the `formora_postgres_data` volume. A simple `pg_dump` cron is enough to start.
 - The API and web app should be sibling subdomains of `gopalchoudhary.dev`. A web app on an
   unrelated domain cannot share the httpOnly auth cookie with the Next.js server.
+- This workflow builds `linux/amd64`. Run `uname -m` on EC2; if it reports `aarch64`, change
+  `platforms` in the workflow and use an ARM-compatible instance.
+
+## Troubleshooting
+
+**SCP fails with `Process exited with status 1`.** The deploy user could not create or write
+the target directory. The workflow uses `/home/ubuntu/formora`, which the `ubuntu` user owns.
+If you changed `SSH_USER`, update `DEPLOY_DIR` to that user's home directory.
+
+**`Docker is not installed` or `Docker Compose v2 is not installed`.** Run the Docker install
+step above as the deploy user, then reconnect so the `docker` group membership applies.
+
+**`Missing /home/ubuntu/formora/.env`.** Copy `deploy/.env.production.example` there, fill
+every blank, and `chmod 600` the result.
+
+**Traefik cannot issue a certificate.** Check that the DNS A record points at the Elastic IP,
+security group ports 80/443 are open, and nothing else is bound to those ports. With
+Cloudflare, use DNS-only until the first certificate is issued.
+
+**API is unhealthy after deploy.** Run `docker compose logs api migrate traefik` from the
+deploy directory. The migration container logs whether the schema is current; the API log
+shows environment or database failures.

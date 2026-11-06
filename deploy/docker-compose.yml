@@ -1,7 +1,7 @@
 name: formora
 
 # Production stack for the API. The web app is deployed separately.
-# Copy .env.production.example to /opt/formora/.env once; CI only overwrites this compose file.
+# Copy .env.production.example to /home/ubuntu/formora/.env once; CI only overwrites this compose file.
 
 x-logging: &default-logging
   driver: json-file
