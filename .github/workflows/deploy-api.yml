@@ -1,0 +1,217 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/database/**"
+      - "packages/logger/**"
+      - "packages/services/**"
+      - "packages/trpc/**"
+      - "packages/typescript-config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".dockerignore"
+      - "deploy/**"
+      - ".github/workflows/deploy-api.yml"
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "packages/database/**"
+      - "packages/logger/**"
+      - "packages/services/**"
+      - "packages/trpc/**"
+      - "packages/typescript-config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - ".dockerignore"
+      - "deploy/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: gopalchoudhary/formora
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/streamyst_test
+      JWT_SECRET: ci-only-secret-not-used-in-production
+      API_BASE_URL: http://localhost:8000
+      CORS_ORIGINS: http://localhost:3000
+      COOKIE_SECURE: "false"
+      COOKIE_SAME_SITE: lax
+      LOGGER_LEVEL: error
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check types
+        run: pnpm turbo check-types --filter=@repo/api...
+
+      - name: Lint
+        run: pnpm turbo lint --filter=@repo/api...
+
+      # These are the suites that exercise the API, its services, the database harness,
+      # and the realtime handlers. DATABASE_URL_TEST is present, so integration tests run
+      # instead of skipping themselves.
+      - name: Test
+        run: pnpm vitest run apps/api/tests packages/services/tests packages/database/tests packages/trpc/tests
+
+  build:
+    name: Build and push image
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME || 'gopalchoudhary' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./apps/api/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  smoke:
+    name: Smoke test image
+    needs: build
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME || 'gopalchoudhary' }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Run the image and check /health
+        run: |
+          set -euo pipefail
+          IMAGE="$IMAGE_NAME:${GITHUB_SHA}"
+          docker pull "$IMAGE"
+          docker run -d --name api-smoke -p 8000:8000 \
+            -e NODE_ENV=production \
+            -e PORT=8000 \
+            -e DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres \
+            -e JWT_SECRET=ci-smoke-only-secret \
+            -e API_BASE_URL=http://127.0.0.1:8000 \
+            -e CORS_ORIGINS=http://localhost:3000 \
+            -e COOKIE_SECURE=true \
+            -e COOKIE_SAME_SITE=lax \
+            -e LOGGER_LEVEL=error \
+            "$IMAGE"
+          trap 'docker rm -f api-smoke' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            echo "Health check attempt ${attempt}/30 failed; retrying in 2s"
+            sleep 2
+          done
+
+          docker logs api-smoke
+          exit 1
+
+  deploy:
+    name: Deploy to EC2
+    needs: [build, smoke]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST || '3.109.1.233' }}
+          username: ${{ secrets.SSH_USER || 'ubuntu' }}
+          key: ${{ secrets.SSH_KEY }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          source: deploy/docker-compose.yml
+          target: /opt/formora
+          strip_components: 1
+          overwrite: true
+
+      - name: Pull, migrate, restart, wait
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST || '3.109.1.233' }}
+          username: ${{ secrets.SSH_USER || 'ubuntu' }}
+          key: ${{ secrets.SSH_KEY }}
+          fingerprint: ${{ secrets.SSH_HOST_FINGERPRINT }}
+          script_stop: true
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/formora
+            export IMAGE_TAG="${{ github.sha }}"
+            docker compose pull api migrate
+            docker compose run --rm -T migrate
+            docker compose up -d --remove-orphans --wait --wait-timeout 120 api traefik
+            docker image prune -f
+
+      - name: Verify public health endpoint
+        run: |
+          curl --fail --silent --show-error \
+            --retry 12 --retry-delay 5 --retry-all-errors \
+            https://formorabackend.gopalchoudhary.dev/health

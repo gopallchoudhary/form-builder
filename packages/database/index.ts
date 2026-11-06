@@ -22,5 +22,6 @@ export function createDatabase(url: string): Database {
 export const db = createDatabase(env.DATABASE_URL);
 
 export * from "drizzle-orm";
+export { migrate } from "drizzle-orm/node-postgres/migrator";
 export { schema };
 export default db;
