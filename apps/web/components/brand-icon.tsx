@@ -11,13 +11,15 @@ import { cn } from "~/lib/utils";
  */
 export function BrandIcon({ className }: { className?: string }) {
   return (
-    <Image
-      src={logo}
-      alt=""
-      width={32}
-      height={32}
-      unoptimized
-      className={cn("shrink-0 rounded-md object-cover", className)}
-    />
+    <span className={cn("relative inline-flex shrink-0 overflow-hidden rounded-md", className)}>
+      <Image
+        src={logo}
+        alt=""
+        width={32}
+        height={32}
+        unoptimized
+        className="size-full scale-150 object-cover"
+      />
+    </span>
   );
 }
