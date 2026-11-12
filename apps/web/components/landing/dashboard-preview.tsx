@@ -7,6 +7,7 @@ import {
 
 import { cn } from "~/lib/utils";
 
+import { BrandIcon } from "~/components/brand-icon";
 import styles from "./landing-motion.module.css";
 
 const ACTIVITY = [34, 49, 42, 63, 52, 76, 68, 88, 73, 96, 82, 100];
@@ -44,9 +45,7 @@ export function DashboardPreview() {
         <div className="grid min-h-[300px] grid-cols-[54px_1fr] sm:grid-cols-[132px_1fr]">
           <aside aria-hidden className="border-r border-border/70 bg-background/70 p-2 sm:p-3">
             <div className="mb-5 flex items-center justify-center gap-2 sm:justify-start">
-              <span className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black">
-                F
-              </span>
+              <BrandIcon className="size-6" />
               <span className="hidden text-xs font-bold sm:inline">Formora</span>
             </div>
             <div className="flex flex-col gap-2.5">

@@ -23,10 +23,12 @@ import {
   SidebarRail,
 } from "~/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { BrandIcon } from "~/components/brand-icon";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { useSignOut, useUser } from "~/hooks/api/auth";
 import { isNavItemActive } from "~/lib/nav";
 import { navHref } from "~/lib/builder-href";
-import { ThemeToggle } from "~/components/theme-toggle";
+
 import { useConsoleStore } from "~/stores/console-store";
 
 /**
@@ -89,9 +91,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="data-[slot=sidebar-menu-button]:p-1.5!">
               <Link href="/dashboard">
-                <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-pill text-[10px] font-bold">
-                  F
-                </span>
+                <BrandIcon className="size-7" />
                 <span className="text-base font-semibold">Formora</span>
               </Link>
             </SidebarMenuButton>

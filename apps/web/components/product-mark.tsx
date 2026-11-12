@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandIcon } from "~/components/brand-icon";
 import { cn } from "~/lib/utils";
 
 /**
@@ -18,10 +19,8 @@ export function ProductMark({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-pill text-xs font-bold">
-        F
-      </span>
+      <BrandIcon className="size-9" />
       Formora
     </Link>
-  )
+  );
 }
